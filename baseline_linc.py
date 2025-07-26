@@ -85,17 +85,20 @@ class ModelClient:
     def __init__(self, model_name: str):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.bfloat16,           # Use bf16 precision
+            device_map="auto"                     # Efficiently use available GPU(s)
+        )
         self.model.eval()  # set to inference mode
-        self.model.to(self.device)
 
     def generate(
         self, prompt: str, max_new_tokens: int, temperature: float, top_p: float
     ):
         # Encode prompt and generate continuation
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs["input_ids"].to(self.device)
-        attention_mask = inputs["attention_mask"].to(self.device)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        input_ids = inputs["input_ids"]
+        attention_mask = inputs["attention_mask"]
         pad_token_id = self.tokenizer.pad_token_id
         if pad_token_id is None:
             pad_token_id = self.tokenizer.eos_token_id
@@ -109,7 +112,7 @@ class ModelClient:
             pad_token_id=pad_token_id,
         )
         # Slice out only the newly generated tokens
-        gen_ids = output_ids[0][input_ids.size(1) :]
+        gen_ids = output_ids[0][input_ids.size(1):]
         return self.tokenizer.decode(gen_ids, skip_special_tokens=True)
 
 class Evaluator:
