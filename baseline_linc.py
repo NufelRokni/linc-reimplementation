@@ -191,11 +191,18 @@ def main():
     is_correct = final_pred.lower() == target_example[2].lower()
 
     # Print results
-    print("Prompt:\n" + prompt)
-    print("Raw model outputs:", raw_preds)
-    print("Majority-vote prediction:", final_pred)
-    print("Gold label:", target_example[2])
-    print("Correct:", is_correct)
+    print("=" * 60)
+    print("PROMPT GIVEN TO THE MODEL:\n")
+    print(prompt)
+    print("=" * 60)
+    print(f"Raw model outputs for {k} samples (before voting):")
+    for idx, pred in enumerate(raw_preds, 1):
+        print(f"  Sample {idx}: {repr(pred)}")
+    print("-" * 60)
+    print(f"Majority-vote prediction: {final_pred}")
+    print(f"Gold label:              {target_example[2]}")
+    print(f"Correct:                 {is_correct}")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
