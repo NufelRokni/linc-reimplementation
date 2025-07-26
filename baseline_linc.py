@@ -280,7 +280,7 @@ def main():
     acc = correct / max(1, written)
     print(f"\nSaved {written} predictions to {cfg.save_path}")
     print(f"Accuracy on these {written} examples: {acc:.3f}")
-DatasetLoaderloader, 
+
 if __name__ == "__main__":
     main()
 
