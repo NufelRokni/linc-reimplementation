@@ -17,20 +17,20 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 class Config:
     """Configuration for the baseline run."""
 
-    model: str = "bigcode/starcoderplus"  # Hugging Face model name (StarCoder+)
-    dataset: str = "tasksource/folio"  # Dataset name or path (FOLIO on HF)
-    split: str = "validation"  # Dataset split to use (e.g., train/validation)
-    index: int = 0  # Index of the example to test
-    shots: int = 1  # Number of in-context examples (fixed to 1 in practice)
-    seed: int = 42  # Random seed for reproducibility
-    max_new_tokens: int = 64  # Max tokens to generate for the answer
-    temperature: float = 0.8  # Sampling temperature (0 for deterministic)
-    top_p: float = 1.0  # Top-p sampling (1.0 for no filtering)
-    vote_k: int = 10  # Number of samples for majority voting
-    do_sample: bool = False  # Enable sampling for generation (recommended for voting)
-    num_examples: int = 10  # <-- Number of examples to solve
-    shuffle: bool = False  # Shuffle dataset before taking first N examples
-    save_path: str = "outputs/preds.jsonl"  # Path to save predictions
+    model: str = "bigcode/starcoderplus"
+    dataset: str = "tasksource/folio"
+    split: str = "validation"
+    shots: int = 1
+    seed: int = 42
+    max_new_tokens: int = 64
+    temperature: float = 0.8
+    top_p: float = 1.0
+    top_k: int = 0
+    vote_k: int = 10
+    do_sample: bool = False
+    num_examples: int = 10
+    shuffle: bool = False
+    save_path: str = "outputs/preds.jsonl"
 
     @staticmethod
     def parse_args() -> "Config":
@@ -38,21 +38,25 @@ class Config:
         parser.add_argument("--model", default="bigcode/starcoderplus")
         parser.add_argument("--dataset", type=str, default="folio", choices=["folio"])
         parser.add_argument("--split", type=str, default="validation")
-        parser.add_argument("--num_examples", type=int, default=10, help="How many items to solve")
-        parser.add_argument("--shuffle", action="store_true", help="Shuffle before taking first N")
-        parser.add_argument("--save_path", type=str, default="outputs/preds.jsonl")
+        parser.add_argument("--shots", type=int, default=1)
         parser.add_argument("--seed", type=int, default=42)
-        parser.add_argument("--vote_k", type=int, default=10)
+        parser.add_argument("--max_new_tokens", type=int, default=64)
         parser.add_argument("--temperature", type=float, default=0.8)
         parser.add_argument("--top_p", type=float, default=1.0)
         parser.add_argument("--top_k", type=int, default=0)
-        parser.add_argument("--do_sample", action="store_true", help="Enable sampling for generation (recommended for voting)")
+        parser.add_argument("--vote_k", type=int, default=10)
+        parser.add_argument("--do_sample", action="store_true")
+        parser.add_argument("--num_examples", type=int, default=10)
+        parser.add_argument("--shuffle", action="store_true")
+        parser.add_argument("--save_path", type=str, default="outputs/preds.jsonl")
+        
         args = parser.parse_args()
-        cfg = Config(**vars(args))
-        # Resolve dataset name if shorthand is given:
-        if cfg.dataset.lower() == "folio":
-            cfg.dataset = "tasksource/folio"
-        return cfg
+        # The 'index' field was unused in the batch loop, so it's removed.
+        # We create a dictionary from args and remove any keys not in Config.
+        config_fields = {f.name for f in fields(Config)}
+        args_dict = {k: v for k, v in vars(args).items() if k in config_fields}
+        
+        return Config(**args_dict)
 
 
 class DatasetLoader:
