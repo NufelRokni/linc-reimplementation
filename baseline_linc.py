@@ -29,6 +29,8 @@ class Config:
     vote_k: int = 10  # Number of samples for majority voting
     do_sample: bool = False  # Enable sampling for generation (recommended for voting)
     num_examples: int = 10  # <-- Number of examples to solve
+    shuffle: bool = False  # Shuffle dataset before taking first N examples
+    save_path: str = "outputs/preds.jsonl"  # Path to save predictions
 
     @staticmethod
     def parse_args() -> "Config":
