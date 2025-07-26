@@ -32,7 +32,7 @@ class Config:
         parser.add_argument("--shots", type=int, default=1)
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument("--max_new_tokens", type=int, default=64)
-        parser.add_argument("--temperature", type=float, default=0.8
+        parser.add_argument("--temperature", type=float, default=0.8)
         parser.add_argument("--top_p", type=float, default=1.0)
         args = parser.parse_args()
         cfg = Config(**vars(args))
