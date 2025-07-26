@@ -6,6 +6,8 @@ import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 @dataclass
@@ -93,12 +95,18 @@ class ModelClient:
         # Encode prompt and generate continuation
         inputs = self.tokenizer(prompt, return_tensors="pt")
         input_ids = inputs["input_ids"].to(self.device)
+        attention_mask = inputs["attention_mask"].to(self.device)
+        pad_token_id = self.tokenizer.pad_token_id
+        if pad_token_id is None:
+            pad_token_id = self.tokenizer.eos_token_id
         output_ids = self.model.generate(
             input_ids,
+            attention_mask=attention_mask,
             max_new_tokens=max_new_tokens,
             do_sample=(temperature > 0.0),
             temperature=temperature,
             top_p=top_p,
+            pad_token_id=pad_token_id,
         )
         # Slice out only the newly generated tokens
         gen_ids = output_ids[0][input_ids.size(1) :]
