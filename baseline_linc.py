@@ -81,18 +81,18 @@ class ModelClient:
     """Loads the language model and handles text generation."""
 
     def __init__(self, model_name: str):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
         self.model.eval()  # set to inference mode
-        # Ensure model is on CPU by default (for GPU, user can move it manually).
-        self.model.to(torch.device("cpu"))
+        self.model.to(self.device)
 
     def generate(
         self, prompt: str, max_new_tokens: int, temperature: float, top_p: float
     ):
         # Encode prompt and generate continuation
         inputs = self.tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs["input_ids"]
+        input_ids = inputs["input_ids"].to(self.device)
         output_ids = self.model.generate(
             input_ids,
             max_new_tokens=max_new_tokens,
@@ -103,7 +103,6 @@ class ModelClient:
         # Slice out only the newly generated tokens
         gen_ids = output_ids[0][input_ids.size(1) :]
         return self.tokenizer.decode(gen_ids, skip_special_tokens=True)
-
 
 class Evaluator:
     """Parses the model output and checks it against the gold label."""
