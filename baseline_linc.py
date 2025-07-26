@@ -35,7 +35,7 @@ class Config:
     @staticmethod
     def parse_args() -> "Config":
         parser = argparse.ArgumentParser()
-        parser.add_argument("--model", default="bigcode/starcoder")
+        parser.add_argument("--model", default="bigcode/starcoderplus")
         parser.add_argument("--dataset", type=str, default="folio", choices=["folio"])
         parser.add_argument("--split", type=str, default="validation")
         parser.add_argument("--shots", type=int, default=1)
