@@ -1,7 +1,7 @@
 import argparse
 import random, re
 from dataclasses import dataclass, fields
-from collections import Counter
+from collections import Counter, defaultdict
 import os
 import json
 
@@ -17,8 +17,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 class Config:
     """Configuration for the baseline run."""
 
-    model: str = "bigcode/starcoderplus"
-    dataset: str = "tasksource/folio"
+    model: str = "bigcode/starcoder"
+    dataset: str = "folio"
     split: str = "validation"
     shots: int = 1
     seed: int = 42
@@ -30,12 +30,12 @@ class Config:
     do_sample: bool = False
     num_examples: int = 10
     shuffle: bool = False
-    save_path: str = "outputs/preds.jsonl"
+    save_path: str = "outputs/predictions.jsonl"
 
     @staticmethod
     def parse_args() -> "Config":
         parser = argparse.ArgumentParser()
-        parser.add_argument("--model", default="bigcode/starcoderplus")
+        parser.add_argument("--model", default="bigcode/starcoder")
         parser.add_argument("--dataset", type=str, default="folio", choices=["folio"])
         parser.add_argument("--split", type=str, default="validation")
         parser.add_argument("--shots", type=int, default=1)
@@ -48,7 +48,7 @@ class Config:
         parser.add_argument("--do_sample", action="store_true")
         parser.add_argument("--num_examples", type=int, default=10)
         parser.add_argument("--shuffle", action="store_true")
-        parser.add_argument("--save_path", type=str, default="outputs/preds.jsonl")
+        parser.add_argument("--save_path", type=str, default="outputs/predictions.jsonl")
         
         args = parser.parse_args()
         # The 'index' field was unused in the batch loop, so it's removed.
@@ -79,16 +79,18 @@ class FewShotPromptBuilder:
     def __init__(self, instruction: str):
         self.instruction = instruction
 
-    def build(self, demo, example):
-        demo_prem, demo_concl, demo_label = demo
-        ex_prem, ex_concl, _ = example
-        prompt = (
-            f"{self.instruction}\n\n"
-            f"Premises: {demo_prem}\n"
-            f"Conclusion: {demo_concl}\n"
-            f"Label: {demo_label}\n\n"
+    def build(self, demos, example):
+        prompt = f"{self.instruction}\n\n"
+        for demo_prem, demo_conclusion, demo_label in demos:
+            prompt += (
+                f"Premises: {demo_prem}\n"
+                f"Conclusion: {demo_conclusion}\n"
+                f"Label: {demo_label}\n\n"
+            )
+        ex_prem, ex_conclusion, _ = example
+        prompt += (
             f"Premises: {ex_prem}\n"
-            f"Conclusion: {ex_concl}\n"
+            f"Conclusion: {ex_conclusion}\n"
             f"Label: "
         )
         return prompt
@@ -150,7 +152,7 @@ class Evaluator:
         return pred_label, correct
 
 def load_folio(args):
-    ds = load_dataset("benlipkin/folio")[args.split]
+    ds = load_dataset("folio")[args.split]
     data = list(ds)
     if args.shuffle:
         random.Random(args.seed).shuffle(data)
@@ -221,6 +223,12 @@ def main():
     os.makedirs(os.path.dirname(cfg.save_path) or ".", exist_ok=True)
     correct = 0
     written = 0
+
+    # Initialize loader and prompt builder for few-shot
+    loader = DatasetLoader("folio", cfg.split)
+    instruction = "Determine if the conclusion follows logically from the premises. Answer with True, False, or Uncertain."
+    prompt_builder = FewShotPromptBuilder(instruction)
+
     with open(cfg.save_path, "w", encoding="utf-8") as f:
         for idx, ex in enumerate(data):
             inputs = build_inputs_from_example(ex, tokenizer, model.device)
@@ -239,10 +247,40 @@ def main():
             written += 1
             print(f"[{idx+1}/{len(data)}] pred={pred} gold={gold} votes={Counter(k_labels)}")
 
+            # New code for few-shot sampling
+            all_examples = data  # assuming 'data' is your loaded dataset
+            target_idx = idx
+
+            # Partition indices by label, skipping the target
+            label_buckets = defaultdict(list)
+            for i, ex2 in enumerate(all_examples):
+                if i == target_idx:
+                    continue
+                label_buckets[ex2["label"]].append(i)
+
+            # Sample one from each label (if available)
+            picked = []
+            for label in ["True", "False", "Uncertain"]:
+                bucket = label_buckets[label]
+                if bucket:
+                    picked.append(random.choice(bucket))
+
+            # Fill up to cfg.shots with random others (excluding target and already picked)
+            remaining = set(range(len(all_examples))) - set(picked) - {target_idx}
+            n_extra = max(0, cfg.shots - len(picked))
+            if n_extra > 0 and remaining:
+                picked.extend(random.sample(list(remaining), k=n_extra))
+
+            # Build demos and target
+            demos = [loader.get_example(i) for i in picked]
+            target = loader.get_example(target_idx)
+            # Build the prompt (not used further in this script, but constructed for completeness)
+            _ = prompt_builder.build(demos, target)
+
     acc = correct / max(1, written)
     print(f"\nSaved {written} predictions to {cfg.save_path}")
-    print(f"Accuracy on these {written} examples: {acc:.3f}")
-
+    prDatasetLoaderAccuracy on tloader, hese {written} examples: {acc:.3f}")
+DatasetLoaderloader, 
 if __name__ == "__main__":
     main()
 
