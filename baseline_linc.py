@@ -2,6 +2,8 @@ import argparse
 import random, re
 from dataclasses import dataclass
 from collections import Counter
+import os
+import json
 
 import numpy as np
 import torch
@@ -31,15 +33,16 @@ class Config:
     def parse_args() -> "Config":
         parser = argparse.ArgumentParser()
         parser.add_argument("--model", default="bigcode/starcoderplus")
-        parser.add_argument("--dataset", default="folio")
-        parser.add_argument("--split", default="validation")
-        parser.add_argument("--index", type=int, default=0)
-        parser.add_argument("--shots", type=int, default=1)
+        parser.add_argument("--dataset", type=str, default="folio", choices=["folio"])
+        parser.add_argument("--split", type=str, default="validation")
+        parser.add_argument("--num_examples", type=int, default=10, help="How many items to solve")
+        parser.add_argument("--shuffle", action="store_true", help="Shuffle before taking first N")
+        parser.add_argument("--save_path", type=str, default="outputs/preds.jsonl")
         parser.add_argument("--seed", type=int, default=42)
-        parser.add_argument("--max_new_tokens", type=int, default=64)
+        parser.add_argument("--vote_k", type=int, default=10)
         parser.add_argument("--temperature", type=float, default=0.8)
         parser.add_argument("--top_p", type=float, default=1.0)
-        parser.add_argument("--vote_k", type=int, default=10, help="Number of samples for majority voting")
+        parser.add_argument("--top_k", type=int, default=0)
         parser.add_argument("--do_sample", action="store_true", help="Enable sampling for generation (recommended for voting)")
         args = parser.parse_args()
         cfg = Config(**vars(args))
@@ -139,71 +142,101 @@ class Evaluator:
         correct = pred_label.lower() == gold_label.lower()
         return pred_label, correct
 
+def load_folio(args):
+    ds = load_dataset("benlipkin/folio")[args.split]
+    data = list(ds)
+    if args.shuffle:
+        random.Random(args.seed).shuffle(data)
+    if args.num_examples > 0:
+        data = data[:args.num_examples]
+    return data
+
+def build_inputs_from_example(ex, tokenizer, device):
+    premises_text = "\n".join(f"- {p}" for p in ex["premises"])
+    prompt = (
+        "Determine if the conclusion follows logically from the premises. "
+        "Answer with True, False, or Uncertain.\n\n"
+        f"Premises:\n{premises_text}\n\n"
+        f"Conclusion: {ex['conclusion']}\n"
+        "Label: "
+    )
+    return tokenizer(prompt, return_tensors="pt").to(device)
+
+def parse_label(text):
+    m = re.search(r"\b(true|false|uncertain)\b", text, flags=re.IGNORECASE)
+    if m:
+        return m.group(1).capitalize()
+    return text.strip().capitalize()
+
 def majority_vote(labels):
     counts = Counter(labels)
     max_c = max(counts.values())
     winners = [lab for lab, c in counts.items() if c == max_c]
     if len(winners) == 1:
         return winners[0]
-    # Tie-break: pick the label that appeared first among the K samples
     first_pos = {lab: labels.index(lab) for lab in winners}
     return min(first_pos, key=first_pos.get)
 
+def vote_once(model, tokenizer, inputs, args):
+    out = model.generate(
+        **inputs,
+        do_sample=True if args.do_sample or args.vote_k > 1 else False,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        top_k=args.top_k if args.top_k > 0 else None,
+        max_new_tokens=args.max_new_tokens,
+        num_return_sequences=args.vote_k,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    texts = tokenizer.batch_decode(out, skip_special_tokens=True)
+    labels = [parse_label(t) for t in texts]
+    return labels, majority_vote(labels)
 
 def main():
-    # Parse configuration
     cfg = Config.parse_args()
-    # Set random seeds for reproducibility
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
-    # Load dataset and select examples
-    loader = DatasetLoader(cfg.dataset, cfg.split)
-    demo_idx = 0 if cfg.index != 0 else 1  # ensure demo and target are different
-    demo_example = loader.get_example(demo_idx)
-    target_example = loader.get_example(cfg.index)
-    # Build prompt with one demonstration
-    instruction = (
-        "Determine if the conclusion follows logically from the premises. "
-        "Answer with True, False, or Uncertain."
+
+    tokenizer = AutoTokenizer.from_pretrained(cfg.model)
+    model = AutoModelForCausalLM.from_pretrained(
+        cfg.model,
+        torch_dtype=torch.bfloat16,
+        device_map="auto"
     )
-    prompt_builder = FewShotPromptBuilder(instruction)
-    prompt = prompt_builder.build(demo_example, target_example)
-    # Load model and prepare evaluator
-    model_client = ModelClient(cfg.model)
-    evaluator = Evaluator()
+    model.eval()
 
-    # K-way sampling and voting
-    k = cfg.vote_k
-    raw_preds = []
-    for i in range(k):
-        # For reproducibility, change the seed for each sample
-        torch.manual_seed(cfg.seed + i)
-        np.random.seed(cfg.seed + i)
-        random.seed(cfg.seed + i)
-        output_text = model_client.generate(
-            prompt, cfg.max_new_tokens, cfg.temperature, cfg.top_p
-        )
-        pred_label, _ = evaluator.evaluate(output_text, target_example[2])
-        raw_preds.append(pred_label)
+    if cfg.dataset == "folio":
+        data = load_folio(cfg)
+    else:
+        raise ValueError("Only FOLIO is supported by this script right now.")
 
-    final_pred = majority_vote(raw_preds)
-    is_correct = final_pred.lower() == target_example[2].lower()
+    os.makedirs(os.path.dirname(cfg.save_path) or ".", exist_ok=True)
+    correct = 0
+    written = 0
+    with open(cfg.save_path, "w", encoding="utf-8") as f:
+        for idx, ex in enumerate(data):
+            inputs = build_inputs_from_example(ex, tokenizer, model.device)
+            k_labels, pred = vote_once(model, tokenizer, inputs, cfg)
+            gold = ex.get("label", None)
+            correct += int(gold is not None and pred.lower() == str(gold).lower())
+            rec = {
+                "index": idx,
+                "premises": ex["premises"],
+                "conclusion": ex["conclusion"],
+                "gold": gold,
+                "pred": pred,
+                "k_labels": k_labels,
+            }
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            written += 1
+            print(f"[{idx+1}/{len(data)}] pred={pred} gold={gold} votes={Counter(k_labels)}")
 
-    # Print results
-    print("=" * 60)
-    print("PROMPT GIVEN TO THE MODEL:\n")
-    print(prompt)
-    print("=" * 60)
-    print(f"Raw model outputs for {k} samples (before voting):")
-    for idx, pred in enumerate(raw_preds, 1):
-        print(f"  Sample {idx}: {repr(pred)}")
-    print("-" * 60)
-    print(f"Majority-vote prediction: {final_pred}")
-    print(f"Gold label:              {target_example[2]}")
-    print(f"Correct:                 {is_correct}")
-    print("=" * 60)
-
+    acc = correct / max(1, written)
+    print(f"\nSaved {written} predictions to {cfg.save_path}")
+    print(f"Accuracy on these {written} examples: {acc:.3f}")
 
 if __name__ == "__main__":
     main()
+
+
