@@ -28,6 +28,7 @@ class Config:
     top_p: float = 1.0  # Top-p sampling (1.0 for no filtering)
     vote_k: int = 10  # Number of samples for majority voting
     do_sample: bool = False  # Enable sampling for generation (recommended for voting)
+    num_examples: int = 10  # <-- Number of examples to solve
 
     @staticmethod
     def parse_args() -> "Config":
