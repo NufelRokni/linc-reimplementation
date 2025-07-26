@@ -1,6 +1,6 @@
 import argparse
 import random, re
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from collections import Counter
 import os
 import json
