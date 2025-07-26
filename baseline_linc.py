@@ -1,6 +1,7 @@
 import argparse
 import random, re
 from dataclasses import dataclass
+from collections import Counter
 
 import numpy as np
 import torch
@@ -23,6 +24,7 @@ class Config:
     max_new_tokens: int = 64  # Max tokens to generate for the answer
     temperature: float = 0.8  # Sampling temperature (0 for deterministic)
     top_p: float = 1.0  # Top-p sampling (1.0 for no filtering)
+    vote_k: int = 10  # Number of samples for majority voting
 
     @staticmethod
     def parse_args() -> "Config":
@@ -36,6 +38,8 @@ class Config:
         parser.add_argument("--max_new_tokens", type=int, default=64)
         parser.add_argument("--temperature", type=float, default=0.8)
         parser.add_argument("--top_p", type=float, default=1.0)
+        parser.add_argument("--vote_k", type=int, default=10, help="Number of samples for majority voting")
+        parser.add_argument("--do_sample", action="store_true", help="Enable sampling for generation (recommended for voting)")
         args = parser.parse_args()
         cfg = Config(**vars(args))
         # Resolve dataset name if shorthand is given:
@@ -134,6 +138,16 @@ class Evaluator:
         correct = pred_label.lower() == gold_label.lower()
         return pred_label, correct
 
+def majority_vote(labels):
+    counts = Counter(labels)
+    max_c = max(counts.values())
+    winners = [lab for lab, c in counts.items() if c == max_c]
+    if len(winners) == 1:
+        return winners[0]
+    # Tie-break: pick the label that appeared first among the K samples
+    first_pos = {lab: labels.index(lab) for lab in winners}
+    return min(first_pos, key=first_pos.get)
+
 
 def main():
     # Parse configuration
@@ -154,18 +168,31 @@ def main():
     )
     prompt_builder = FewShotPromptBuilder(instruction)
     prompt = prompt_builder.build(demo_example, target_example)
-    # Load model and generate prediction
+    # Load model and prepare evaluator
     model_client = ModelClient(cfg.model)
-    output_text = model_client.generate(
-        prompt, cfg.max_new_tokens, cfg.temperature, cfg.top_p
-    )
-    # Evaluate prediction
     evaluator = Evaluator()
-    pred_label, is_correct = evaluator.evaluate(output_text, target_example[2])
+
+    # K-way sampling and voting
+    k = cfg.vote_k
+    raw_preds = []
+    for i in range(k):
+        # For reproducibility, change the seed for each sample
+        torch.manual_seed(cfg.seed + i)
+        np.random.seed(cfg.seed + i)
+        random.seed(cfg.seed + i)
+        output_text = model_client.generate(
+            prompt, cfg.max_new_tokens, cfg.temperature, cfg.top_p
+        )
+        pred_label, _ = evaluator.evaluate(output_text, target_example[2])
+        raw_preds.append(pred_label)
+
+    final_pred = majority_vote(raw_preds)
+    is_correct = final_pred.lower() == target_example[2].lower()
+
     # Print results
     print("Prompt:\n" + prompt)
-    print("Model output:", output_text.strip())
-    print("Parsed prediction:", pred_label)
+    print("Raw model outputs:", raw_preds)
+    print("Majority-vote prediction:", final_pred)
     print("Gold label:", target_example[2])
     print("Correct:", is_correct)
 
