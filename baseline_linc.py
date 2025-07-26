@@ -19,7 +19,7 @@ class Config:
     shots: int = 1  # Number of in-context examples (fixed to 1 in practice)
     seed: int = 42  # Random seed for reproducibility
     max_new_tokens: int = 64  # Max tokens to generate for the answer
-    temperature: float = 0.0  # Sampling temperature (0 for deterministic)
+    temperature: float = 0.8  # Sampling temperature (0 for deterministic)
     top_p: float = 1.0  # Top-p sampling (1.0 for no filtering)
 
     @staticmethod
@@ -32,7 +32,7 @@ class Config:
         parser.add_argument("--shots", type=int, default=1)
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument("--max_new_tokens", type=int, default=64)
-        parser.add_argument("--temperature", type=float, default=0.0)
+        parser.add_argument("--temperature", type=float, default=0.8
         parser.add_argument("--top_p", type=float, default=1.0)
         args = parser.parse_args()
         cfg = Config(**vars(args))
