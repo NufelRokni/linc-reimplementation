@@ -25,11 +25,11 @@ from typing import Dict, List, Optional
 # module can be imported in environments where transformers is not
 # installed (e.g. for documentation generation).
 
-from .arguments import build_argparser
-from .data_loading import load_folio, SimpleLoader
-from .model_utils import torch_dtype_from_precision
-from .prompt import PromptBuilder, INSTRUCTION
-from .inference import infer_once_or_vote
+from arguments import build_argparser
+from data_loading import load_folio, SimpleLoader
+from model_utils import torch_dtype_from_precision
+from prompt import PromptBuilder, INSTRUCTION
+from inference import infer_once_or_vote
 
 __all__ = ["main"]
 
