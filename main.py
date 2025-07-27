@@ -55,7 +55,7 @@ def main() -> None:
 
     tokenizer = AutoTokenizer.from_pretrained(
         args.model,
-        use_fast=True,
+        use_fast=False,
         trust_remote_code=getattr(args, "trust_remote_code", True),
     )
     # Ensure a pad token exists; fall back to eos if necessary
@@ -63,13 +63,14 @@ def main() -> None:
         tokenizer.pad_token = tokenizer.eos_token
     # Import torch lazily to avoid mandatory dependency at import time
     import torch  # type: ignore
+    torch.cuda.empty_cache()
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         torch_dtype=dtype,
-        device_map=args.device_map,
         trust_remote_code=getattr(args, "trust_remote_code", True),
     )
+    model.to("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     # 3) Prompt builder
     prompt_builder = PromptBuilder(INSTRUCTION)
