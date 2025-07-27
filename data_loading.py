@@ -29,6 +29,7 @@ __all__ = [
     "load_folio",
     "SimpleLoader",
     "canon_label",
+        "ScratchpadLoader",
 ]
 
 
@@ -181,5 +182,103 @@ class SimpleLoader:
 
         :param idx: Index into the underlying dataset split.
         :returns: A dictionary with keys ``premises``, ``conclusion`` and ``label``.
+        """
+        return self.data[idx]
+
+
+class ScratchpadLoader:
+    """Loader that preserves per‑premise FOL annotations for scratchpad mode.
+
+    This loader normalises FOLIO dataset records such that each returned example
+    contains a list of premise strings, a corresponding list of FOL translations,
+    a conclusion string and its FOL translation, and a canonicalised label.  It
+    is intended for use with the scratchpad prompt, where demonstrations show
+    TEXT/FOL pairs for every premise and conclusion and the answer is provided
+    after an explicit ``ANSWER:`` tag.  If FOL translations are absent in the
+    dataset, empty strings are supplied as placeholders so that the prompt
+    structure remains consistent.
+    """
+
+    def __init__(self, hf_split) -> None:
+        # Convert the HuggingFace split into a list of normalised examples.  If
+        # ``hf_split`` is ``None`` (e.g. when no training set is available),
+        # initialise an empty list.  The normalisation retains lists of
+        # premises and FOL translations rather than flattening them into a
+        # single string as done in ``SimpleLoader``.
+        self.data: List[Dict] = [self._normalize_row(r) for r in hf_split] if hf_split is not None else []
+
+    @staticmethod
+    def _normalize_row(row: Dict) -> Dict:
+        # Extract premises as a list.  The FOLIO dataset stores premises under
+        # the key ``premises`` as a list of strings, but some variants may
+        # provide a single string field (e.g. ``context``).  Normalise both
+        # cases into a list of strings.
+        prs = []
+        if "premises" in row and row["premises"] is not None:
+            if isinstance(row["premises"], list):
+                prs = [str(p).strip() for p in row["premises"]]
+            else:
+                # single string; wrap in list
+                prs = [str(row["premises"]).strip()]
+        elif "context" in row and row["context"] is not None:
+            prs = [str(row["context"]).strip()]
+        else:
+            prs = []
+        # Extract FOL translations for premises.  Use whichever key is present
+        # (``premises-FOL`` or ``premises_fol``).  If absent, generate a
+        # placeholder list of empty strings matching the number of premises.
+        pfol = None
+        for key in ("premises-FOL", "premises_fol", "premises_folios", "premises_fols"):
+            if key in row and row[key] is not None:
+                pfol = row[key]
+                break
+        if pfol is None:
+            pfol_list = ["" for _ in prs]
+        else:
+            if isinstance(pfol, list):
+                pfol_list = [str(f).strip() for f in pfol]
+            else:
+                # single string or other type; wrap and duplicate if necessary
+                pfol_list = [str(pfol).strip()] * max(1, len(prs))
+        # Extract the conclusion and its FOL translation.  Several keys might
+        # encode the conclusion/hypothesis in different dataset variants.
+        concl = ""
+        for k in ("conclusion", "hypothesis", "query", "statement"):
+            if k in row and row[k] is not None:
+                concl = str(row[k]).strip()
+                break
+        cfol = None
+        for key in ("conclusion-FOL", "conclusion_fol", "conclusion-FOLIO", "conclusion_fols"):
+            if key in row and row[key] is not None:
+                cfol = row[key]
+                break
+        if cfol is None:
+            concl_fol = ""
+        else:
+            # FOL for conclusion is a single string
+            if isinstance(cfol, list):
+                # join list if erroneously provided as list
+                concl_fol = " ".join(str(x).strip() for x in cfol)
+            else:
+                concl_fol = str(cfol).strip()
+        # Canonicalise the label
+        raw_label = row.get("label", row.get("answer"))
+        label = canon_label(raw_label)
+        return {
+            "premises": prs,
+            "premises_fol": pfol_list,
+            "conclusion": concl,
+            "conclusion_fol": concl_fol,
+            "label": label,
+        }
+
+    def get_example(self, idx: int) -> Dict:
+        """Return the normalised scratchpad example at a given index.
+
+        Each example includes a list of premises and corresponding FOL
+        translations, a conclusion and its FOL, and the label.
+
+        :param idx: Index into the underlying dataset split.
+        :returns: Normalised dictionary as described in ``_normalize_row``.
         """
         return self.data[idx]

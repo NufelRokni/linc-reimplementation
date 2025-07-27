@@ -42,10 +42,19 @@ def main() -> None:
     # Resolve generation length: prefer max_length_generation if set
     if args.max_length_generation is not None:
         args.max_new_tokens = args.max_length_generation
+
     # 1) Load dataset (targets + train for few‑shot pool)
     hf_tgt_split, hf_train_split = load_folio(args)
-    loader = SimpleLoader(hf_tgt_split)
-    loader_train = SimpleLoader(hf_train_split) if hf_train_split is not None else None
+    # Choose a loader based on the evaluation mode.  In scratchpad mode
+    # we require examples that include FOL translations for each premise and
+    # conclusion; otherwise use the simple loader.
+    if getattr(args, "mode", "baseline") == "scratchpad":
+        from data_loading import ScratchpadLoader  # local import to avoid circular
+        loader = ScratchpadLoader(hf_tgt_split)
+        loader_train = ScratchpadLoader(hf_train_split) if hf_train_split is not None else None
+    else:
+        loader = SimpleLoader(hf_tgt_split)
+        loader_train = SimpleLoader(hf_train_split) if hf_train_split is not None else None
     data = loader.data
     n_total = len(data)
     # 2) Load model and tokenizer
@@ -55,7 +64,7 @@ def main() -> None:
 
     tokenizer = AutoTokenizer.from_pretrained(
         args.model,
-        use_fast=False,
+        use_fast=True,
         trust_remote_code=getattr(args, "trust_remote_code", True),
     )
     # Ensure a pad token exists; fall back to eos if necessary
@@ -63,17 +72,23 @@ def main() -> None:
         tokenizer.pad_token = tokenizer.eos_token
     # Import torch lazily to avoid mandatory dependency at import time
     import torch  # type: ignore
-    torch.cuda.empty_cache()
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         torch_dtype=dtype,
+        device_map=args.device_map,
         trust_remote_code=getattr(args, "trust_remote_code", True),
     )
-    model.to("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     # 3) Prompt builder
-    prompt_builder = PromptBuilder(INSTRUCTION)
+    # Select a prompt builder appropriate for the chosen mode.  For
+    # scratchpad mode we use a custom builder that emits TEXT/FOL pairs
+    # and an ANSWER tag; otherwise use the simple baseline builder.
+    if getattr(args, "mode", "baseline") == "scratchpad":
+        from prompt import ScratchpadPromptBuilder, INSTRUCTION_SCRATCHPAD
+        prompt_builder = ScratchpadPromptBuilder(INSTRUCTION_SCRATCHPAD)
+    else:
+        prompt_builder = PromptBuilder(INSTRUCTION)
     # 4) Determine evaluation size
     n = args.limit if args.limit is not None else args.num_examples
     n = max(1, min(n, n_total))

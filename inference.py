@@ -97,7 +97,22 @@ def infer_once_or_vote(model, tokenizer, prompt: str, args) -> Tuple[str, Counte
     votes: Counter = Counter()
     for _ in range(max(1, args.n_samples)):
         gen = generate_once(model, tokenizer, prompt, args)
-        lab = parse_label_from_text(gen) or "Uncertain"
+        # Determine label based on mode.  In scratchpad mode the answer
+        # should appear after an explicit "ANSWER:" marker; fall back to
+        # the generic parser if the marker is absent.  For baseline mode
+        # simply extract the first occurrence of a label.
+        lab: Optional[str]
+        mode = getattr(args, "mode", "baseline")
+        if mode == "scratchpad":
+            if "ANSWER:" in gen:
+                after = gen.split("ANSWER:")[-1]
+                lab = parse_label_from_text(after)
+            else:
+                lab = parse_label_from_text(gen)
+        else:
+            lab = parse_label_from_text(gen)
+        if not lab:
+            lab = "Uncertain"
         votes[lab] += 1
         if getattr(args, "verbose", False):
             print(f"  sample -> {gen!r} => {lab}")

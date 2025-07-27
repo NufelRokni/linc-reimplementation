@@ -143,4 +143,17 @@ def build_argparser() -> argparse.ArgumentParser:
         default=42,
         help="Random seed for few‑shot sampling",
     )
+
+    # Inference mode
+    p.add_argument(
+        "--mode",
+        type=str,
+        default="baseline",
+        choices=["baseline", "scratchpad"],
+        help=(
+            "Evaluation mode. "
+            "Use 'baseline' for plain premise/conclusion prompts or "
+            "'scratchpad' to include FOL translations and an explicit ANSWER tag."
+        ),
+    )
     return p
