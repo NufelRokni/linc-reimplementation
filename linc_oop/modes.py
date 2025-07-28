@@ -20,9 +20,13 @@ from typing import Dict, Optional
 
 from .datasets import Sample
 from .prompts import PromptBuilder
-from .models import LMModel
 from .fol import extract_fol_blocks, normalize_for_prover9
 from .prover import prove_label
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:  # pragma: no cover
+    # ``LMModel`` is imported for type hints only to avoid pulling in heavy dependencies at runtime.
+    from .models import LMModel  # noqa: F401
 
 __all__ = ["BaseMode", "BaselineMode", "CotMode", "ScratchpadMode", "LincMode"]
 
@@ -37,7 +41,7 @@ class BaseMode:
     prompt builder via ``self.model`` and ``self.prompt_builder``.
     """
 
-    def __init__(self, model: LMModel, prompt_builder: PromptBuilder, args) -> None:
+    def __init__(self, model: "LMModel", prompt_builder: PromptBuilder, args) -> None:
         self.model = model
         self.prompt_builder = prompt_builder
         self.args = args
