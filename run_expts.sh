@@ -32,10 +32,10 @@ for model in "bigcode/starcoderplus"; do
                 job+=" --model ${model} --precision bf16"
                 # job+=" --use_auth_token --openai_api_env_keys OPENAI_API_KEY" # deleted for local runs
                 job+=" --use_auth_token"
-                job+=" --tasks ${task} --n_samples 10 --batch_size ${batch_size}"
+                job+=" --tasks ${task} --n_samples 3 --batch_size ${batch_size}"
                 job+=" --max_length_generation ${max_length} --temperature 0.8"
                 job+=" --allow_code_execution --trust_remote_code --output_dir ${outdir}"
-                job+=" --limit 1"
+                job+=" --limit 3"
                 job+=" --save_generations_raw --save_generations_raw_path ${run_id}_generations_raw.json"
                 job+=" --save_generations_prc --save_generations_prc_path ${run_id}_generations_prc.json"
                 job+=" --save_references --save_references_path ${run_id}_references.json"
