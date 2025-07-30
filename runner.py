@@ -54,75 +54,38 @@ def main():
         for task in task_names:
             results[task] = evaluator.evaluate(task)
     else:
-        evaluator = None
-        if args.openai_api_env_keys:
-            env_key = args.openai_api_env_keys[0]  # use any key to get list of models
-            openai.api_key = os.environ[env_key]
-            comp_models = {
-                "code-davinci-002",
-                "text-davinci-003",
-                "text-davinci-002",
-                "text-curie-001",
-                "text-babbage-001",
-                "text-ada-001",
-            }
-            chat_models = {
-                "gpt-4",
-                "gpt-4-0613",
-                "gpt-4-32k",
-                "gpt-4-32k-0613",
-                "gpt-3.5-turbo",
-                "gpt-3.5-turbo-16k",
-                "gpt-3.5-turbo-0613",
-                "gpt-3.5-turbo-16k-0613",
-            }
-            if any(model == args.model for model in comp_models):
-                print(f"Using OpenAI Completion API for model {args.model}")
-                evaluator = OAIEvaluator(args)
-            elif any(model == args.model for model in chat_models):
-                print(f"Using OpenAI Chat API for model {args.model}")
-                evaluator = OAIEvaluator(args, chat=True)
+        # Always use local HuggingFace models
+        dict_precisions = {
+            "fp32": torch.float32,
+            "fp16": torch.float16,
+            "bf16": torch.bfloat16,
+        }
+        if args.precision not in dict_precisions:
+            raise ValueError(
+                f"Non valid precision {args.precision}, choose from: fp16, fp32, bf16"
+            )
+        print(f"Loading the model and tokenizer from HF (in {args.precision})")
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model,
+            revision=args.revision,
+            torch_dtype=dict_precisions[args.precision],
+            trust_remote_code=args.trust_remote_code,
+            use_auth_token=args.use_auth_token,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model,
+            revision=args.revision,
+            use_auth_token=args.use_auth_token,
+            truncation_side="left",
+        )
+        if not tokenizer.eos_token:
+            if tokenizer.bos_token:
+                tokenizer.eos_token = tokenizer.bos_token
+                print("bos_token used as eos_token")
             else:
-                print(
-                    f"Model {args.model} not found in OpenAI API. Assuming HuggingFace locally."
-                )
-        else:
-            warn(
-                "No OpenAI API key provided. Will attempt to use HuggingFace locally regardless of which model name was given."
-            )
-
-        if evaluator is None:
-            dict_precisions = {
-                "fp32": torch.float32,
-                "fp16": torch.float16,
-                "bf16": torch.bfloat16,
-            }
-            if args.precision not in dict_precisions:
-                raise ValueError(
-                    f"Non valid precision {args.precision}, choose from: fp16, fp32, bf16"
-                )
-            print(f"Loading the model and tokenizer from HF (in {args.precision})")
-            model = AutoModelForCausalLM.from_pretrained(
-                args.model,
-                revision=args.revision,
-                torch_dtype=dict_precisions[args.precision],
-                trust_remote_code=args.trust_remote_code,
-                use_auth_token=args.use_auth_token,
-            )
-            tokenizer = AutoTokenizer.from_pretrained(
-                args.model,
-                revision=args.revision,
-                use_auth_token=args.use_auth_token,
-                truncation_side="left",
-            )
-            if not tokenizer.eos_token:
-                if tokenizer.bos_token:
-                    tokenizer.eos_token = tokenizer.bos_token
-                    print("bos_token used as eos_token")
-                else:
-                    raise ValueError("No eos_token or bos_token found")
-            tokenizer.pad_token = tokenizer.eos_token
-            evaluator = HFEvaluator(accelerator, model, tokenizer, args)
+                raise ValueError("No eos_token or bos_token found")
+        tokenizer.pad_token = tokenizer.eos_token
+        evaluator = HFEvaluator(accelerator, model, tokenizer, args)
 
         for task in task_names:
             if args.generation_only:
