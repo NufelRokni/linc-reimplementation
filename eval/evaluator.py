@@ -8,8 +8,8 @@ import warnings
 from abc import abstractmethod, ABC
 from warnings import warn
 
-import openai
 from diskcache import Cache
+
 from eval import tasks
 from eval.generation import parallel_generations
 
