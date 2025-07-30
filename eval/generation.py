@@ -79,9 +79,11 @@ def parallel_generations(task, dataset, accelerator, model, tokenizer, n_tasks, 
             return {}
         return default_collate(filtered)
 
+    # Drop the final, potentially-empty batch entirely
     ds_loader = DataLoader(
         ds_tokenized,
         batch_size=1,
+        drop_last=True,
         collate_fn=collate_filter_none
     )
 
