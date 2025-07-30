@@ -116,33 +116,38 @@ def complete_code(
     """
 
     gen_token_dict = defaultdict(list)
-    for step, batch in tqdm(
-        enumerate(dataloader),
-        total=math.ceil(
-            n_tasks * dataloader.dataset.n_copies / accelerator.num_processes
-        ),
-    ):
-        with torch.no_grad():
-            if task.stop_words:
-                gen_kwargs["stopping_criteria"][0].start_length = batch["ids"].shape[-1]
-            generated_tokens = accelerator.unwrap_model(model).generate(
-                input_ids=batch["ids"][:, : batch["input_len"]],
-                num_return_sequences=batch_size,
-                **gen_kwargs,
-            )
-            generated_tasks = batch["task_id"].repeat(batch_size)
-            generated_tokens = accelerator.pad_across_processes(
-                generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
-            )
+    try:
+        for step, batch in tqdm(
+            enumerate(dataloader),
+            total=math.ceil(
+                n_tasks * dataloader.dataset.n_copies / accelerator.num_processes
+            ),
+        ):
+            with torch.no_grad():
+                if task.stop_words:
+                    gen_kwargs["stopping_criteria"][0].start_length = batch["ids"].shape[-1]
+                generated_tokens = accelerator.unwrap_model(model).generate(
+                    input_ids=batch["ids"][:, : batch["input_len"]],
+                    num_return_sequences=batch_size,
+                    **gen_kwargs,
+                )
+                generated_tasks = batch["task_id"].repeat(batch_size)
+                generated_tokens = accelerator.pad_across_processes(
+                    generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
+                )
 
-            generated_tokens, generated_tasks = accelerator.gather(
-                (generated_tokens, generated_tasks)
-            )
-            generated_tokens = generated_tokens.cpu().numpy()
-            generated_tasks = generated_tasks.cpu().numpy()
+                generated_tokens, generated_tasks = accelerator.gather(
+                    (generated_tokens, generated_tasks)
+                )
+                generated_tokens = generated_tokens.cpu().numpy()
+                generated_tasks = generated_tasks.cpu().numpy()
 
-            for sample, generated_tokens in zip(generated_tasks, generated_tokens):
-                gen_token_dict[sample].append(generated_tokens)
+                for sample, generated_tokens in zip(generated_tasks, generated_tokens):
+                    gen_token_dict[sample].append(generated_tokens)
+    except Exception as e:
+        print(f"[ERROR] Exception during generation loop: {e}")
+        print(f"[DEBUG] n_tasks={n_tasks}, batch_size={batch_size}, num_devices={accelerator.num_processes}")
+        raise
 
     def parse_infill(code, tokenizer):
         """Reorder infill code and remove remaining special tokens."""
