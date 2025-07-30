@@ -10,8 +10,8 @@ import transformers
 from accelerate import Accelerator
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 
-from eval.args import RunnerArguments, HFArguments, OAIArguments, GenerationArguments
-from eval.evaluator import HFEvaluator, OAIEvaluator
+from eval.args import RunnerArguments, HFArguments, GenerationArguments
+from eval.evaluator import HFEvaluator
 from eval.tasks import ALL_TASKS
 
 transformers.logging.set_verbosity_error()
