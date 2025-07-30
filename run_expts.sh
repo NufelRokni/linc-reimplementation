@@ -6,7 +6,8 @@ outdir="outputs"
 mkdir -p ${outdir}
 
 for model in "bigcode/starcoderplus"; do
-    for base in "folio" "proofwriter"; do
+    # for base in "folio" "proofwriter"; do
+    for base in "folio"; do
         if [[ ${model} == "bigcode/starcoderplus" ]]; then
             batch_size=5
             max_length=8192 # max model context including prompt
@@ -34,6 +35,7 @@ for model in "bigcode/starcoderplus"; do
                 job+=" --tasks ${task} --n_samples 10 --batch_size ${batch_size}"
                 job+=" --max_length_generation ${max_length} --temperature 0.8"
                 job+=" --allow_code_execution --trust_remote_code --output_dir ${outdir}"
+                job+=" --limit 1"
                 job+=" --save_generations_raw --save_generations_raw_path ${run_id}_generations_raw.json"
                 job+=" --save_generations_prc --save_generations_prc_path ${run_id}_generations_prc.json"
                 job+=" --save_references --save_references_path ${run_id}_references.json"
