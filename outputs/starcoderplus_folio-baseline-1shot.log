@@ -3,7 +3,7 @@ ipex flag is deprecated, will be removed in Accelerate v1.10. From 2.7.0, PyTorc
   warnings.warn(
 Selected Tasks: ['folio-baseline-1shot']
 Loading the model and tokenizer from HF (in bf16)
-Loading checkpoint shards:   0%|          | 0/7 [00:00<?, ?it/s]Loading checkpoint shards:  14%|█▍        | 1/7 [00:03<00:19,  3.32s/it]Loading checkpoint shards:  29%|██▊       | 2/7 [00:06<00:16,  3.27s/it]Loading checkpoint shards:  43%|████▎     | 3/7 [00:10<00:13,  3.37s/it]Loading checkpoint shards:  57%|█████▋    | 4/7 [00:15<00:12,  4.22s/it]Loading checkpoint shards:  71%|███████▏  | 5/7 [00:21<00:09,  4.89s/it]Loading checkpoint shards:  86%|████████▌ | 6/7 [00:28<00:05,  5.44s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:31<00:00,  4.66s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:31<00:00,  4.46s/it]
+Loading checkpoint shards:   0%|          | 0/7 [00:00<?, ?it/s]Loading checkpoint shards:  14%|█▍        | 1/7 [00:03<00:20,  3.37s/it]Loading checkpoint shards:  29%|██▊       | 2/7 [00:06<00:15,  3.19s/it]Loading checkpoint shards:  43%|████▎     | 3/7 [00:09<00:13,  3.35s/it]Loading checkpoint shards:  57%|█████▋    | 4/7 [00:14<00:11,  3.83s/it]Loading checkpoint shards:  71%|███████▏  | 5/7 [00:19<00:08,  4.21s/it]Loading checkpoint shards:  86%|████████▌ | 6/7 [00:26<00:05,  5.33s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:30<00:00,  4.66s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:30<00:00,  4.33s/it]
 /opt/conda/envs/linc/lib/python3.10/site-packages/transformers/models/auto/tokenization_auto.py:999: FutureWarning: The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.
   warnings.warn(
 number of problems for this task is 3
@@ -17,7 +17,7 @@ Traceback (most recent call last):
     generations_prc, generations_raw, references = self.generate_text(task_name)
   File "/app/linc-reimplementation/eval/evaluator.py", line 88, in generate_text
     generations_prc, generations_raw = parallel_generations(
-  File "/app/linc-reimplementation/eval/generation.py", line 79, in parallel_generations
+  File "/app/linc-reimplementation/eval/generation.py", line 91, in parallel_generations
     generations_prc, generations_raw = complete_code(
   File "/app/linc-reimplementation/eval/utils.py", line 119, in complete_code
     for step, batch in tqdm(
