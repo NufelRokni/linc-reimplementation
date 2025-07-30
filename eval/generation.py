@@ -1,6 +1,6 @@
 import json
 
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.dataloader import DataLoader, default_collate
 from transformers import StoppingCriteria, StoppingCriteriaList
 from accelerate.utils import set_seed
 
@@ -72,8 +72,18 @@ def parallel_generations(task, dataset, accelerator, model, tokenizer, n_tasks, 
         prefix=args.prefix,
     )
 
-    # do not confuse args.batch_size, which is actually the num_return_sequences
-    ds_loader = DataLoader(ds_tokenized, batch_size=1)
+    # drop any None samples before they ever hit the model
+    def collate_filter_none(batch):
+        filtered = [b for b in batch if b is not None]
+        if len(filtered) == 0:
+            return {}
+        return default_collate(filtered)
+
+    ds_loader = DataLoader(
+        ds_tokenized,
+        batch_size=1,
+        collate_fn=collate_filter_none
+    )
 
     model, ds_loader = accelerator.prepare(model, ds_loader)
     generations_prc, generations_raw = complete_code(
