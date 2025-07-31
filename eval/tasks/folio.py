@@ -59,3 +59,41 @@ class FOLIOBase(OWAFOLTask):
         return dataset.map(reformat_fol_sample).filter(
             lambda x: x["label"] != self.ERROR_TOKEN
         )
+
+    def get_prompt(self, doc):
+        """
+        Build the 1-shot prompt:
+          [system instructions]
+          <PREMISES> … </PREMISES>
+          <CONCLUSION> … </CONCLUSION>
+          <EVALUATE>
+        plus the single demonstration if self._nshot == 1.
+        """
+        shots = self._dataset.select(range(self._nshot))
+        def fmt(example):
+            prem = "\n".join(example["premises"])
+            return (
+                "The following is a first-order logic (FOL) problem.\n"
+                "The problem is to determine whether the conclusion follows from the premises.\n"
+                "The premises …\n\n"
+                f"<PREMISES>\n{prem}\n</PREMISES>\n"
+                f"<CONCLUSION>\n{example['conclusion']}\n</CONCLUSION>\n"
+                "<EVALUATE>\n"
+                f"{example['label']}\n</EVALUATE>\n\n"
+            )
+
+        demo_block = "".join(fmt(s) for s in shots)
+        target_block = fmt(doc).rsplit("\n<EVALUATE>\n", 1)[0] + "\n<EVALUATE>\n"
+        return demo_block + target_block
+
+    def get_reference(self, doc):
+        return doc["label"]
+
+    def postprocess_generation(self, gen):
+        resp = gen.strip()
+        if resp not in {"True", "False", "Uncertain"}:
+            # heuristic fallback – grab the **last** legal token in the string
+            import re
+            hits = re.findall(r"\b(True|False|Uncertain)\b", resp, flags=re.I)
+            resp = hits[-1].capitalize() if hits else self.ERROR_TOKEN
+        return resp
