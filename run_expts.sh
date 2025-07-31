@@ -20,7 +20,7 @@ for model in "bigcode/starcoderplus"; do
             fi
         fi
         # for n in "1" "2" "4" "8"; do # this is the original loop
-        for n in "1"; do
+        for n in "2"; do
             # if [[ ${n} != "8" ]] && [[ ${base} != "folio" || ${model} == "gpt-4-0613" ]]; then
             #     continue
             # fi
@@ -31,10 +31,10 @@ for model in "bigcode/starcoderplus"; do
                 job="cd $(pwd); source activate linc; accelerate launch runner.py"
                 job+=" --model ${model} --precision bf16"
                 job+=" --use_auth_token"
-                job+=" --tasks ${task} --n_samples 10 --batch_size ${batch_size}"
+                job+=" --tasks ${task} --n_samples 5 --batch_size ${batch_size}"
                 job+=" --max_length_generation ${max_length} --temperature 0.8"
                 job+=" --allow_code_execution --trust_remote_code --output_dir ${outdir}"
-                job+=" --limit 30"
+                job+=" --limit 10"
                 job+=" --save_generations_raw --save_generations_raw_path ${run_id}_generations_raw.json"
                 job+=" --save_generations_prc --save_generations_prc_path ${run_id}_generations_prc.json"
                 job+=" --save_references --save_references_path ${run_id}_references.json"
