@@ -2,8 +2,8 @@
 FOLIO: Natural Language Reasoning with First-Order Logic
 https://arxiv.org/pdf/2209.00840.pdf
 """
-from eval.base import OWAFOLTask
-from eval.tasks.utils import evaluate, convert_to_nltk_rep
+from ..base import OWAFOLTask
+from utils import evaluate, convert_to_nltk_rep
 
 _CITATION = """
 @article{han2022folio,
@@ -13,16 +13,6 @@ _CITATION = """
   year={2022}
 }
 """
-
-header = (
-    "The following is a first-order logic (FOL) problem.\n"
-    "The problem is to determine whether the conclusion follows from the premises.\n"
-    "The premises are given in the form of a set of first-order logic sentences.\n"
-    "The conclusion is given in the form of a single first-order logic sentence.\n"
-    "The task is to evaluate the conclusion as 'True', 'False', or 'Uncertain' given the premises.\n"
-    "\n\n"
-)
-
 
 def create_all_tasks():
     def create_task(mode, n):
@@ -59,51 +49,11 @@ class FOLIOBase(OWAFOLTask):
                 label = evaluate(sample["premises-FOL"], sample["conclusion-FOL"])
                 assert sample["label"] == label
             except Exception as e:
-                # print(f"Error in parsing FOL: {e}")
-                # print(sample)
+                print(f"Error in parsing FOL: {e}")
+                print(f"Sample: {sample}")
                 sample["label"] = self.ERROR_TOKEN
             return sample
 
         return dataset.map(reformat_fol_sample).filter(
             lambda x: x["label"] != self.ERROR_TOKEN
         )
-
-    def get_prompt(self, doc):
-        """
-        Build the 1-shot prompt:
-          [system instructions]
-          <PREMISES> … </PREMISES>
-          <CONCLUSION> … </CONCLUSION>
-          <EVALUATE>
-        plus the single demonstration if self._nshot == 1.
-        """
-        shots = self._dataset.select(range(self._nshot))
-
-        def fmt(example):
-            prem_block = "\n".join(example["premises"])
-            return (
-                header +
-                f"<PREMISES>\n{prem_block}\n</PREMISES>\n"
-                f"<CONCLUSION>\n{example['conclusion']}\n</CONCLUSION>\n"
-                "<EVALUATE>\n"
-                f"{example['label']}\n</EVALUATE>\n\n"
-            )
-
-        demo = "".join(fmt(s) for s in shots)
-        target = fmt(doc).rsplit("\n<EVALUATE>\n", 1)[0] + "\n<EVALUATE>\n"
-        return demo + target
-
-    def get_reference(self, doc):
-        return doc["label"]
-
-    def postprocess_generation(self, gen, sample_idx=None):
-        """
-        gen: the raw LLM output (with prefix stripped)
-        sample_idx: which sample this was (unused here)
-        """
-        resp = gen.strip()
-        if resp not in {"True", "False", "Uncertain"}:
-            import re
-            hits = re.findall(r"\b(True|False|Uncertain)\b", resp, flags=re.I)
-            resp = hits[-1].capitalize() if hits else self.ERROR_TOKEN
-        return resp

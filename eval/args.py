@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-from eval.tasks import ALL_TASKS
+from tasks import ALL_TASKS
 
 
 @dataclass

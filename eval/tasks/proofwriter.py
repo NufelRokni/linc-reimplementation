@@ -1,4 +1,4 @@
-from eval.base import OWAFOLTask
+from ..base import OWAFOLTask
 
 _CITATION = """
 @inproceedings{Tafjord2020ProofWriterGI,
