@@ -45,13 +45,13 @@ def parallel_generations(task, dataset, accelerator, model, tokenizer, n_tasks, 
 
     set_seed(args.seed, device_specific=True)
 
+    # Use *max_new_tokens* instead of *max_length* so the model can stop early
     gen_kwargs = {
         "do_sample": args.do_sample,
         "temperature": args.temperature,
         "top_p": args.top_p,
         "top_k": args.top_k,
-        "max_length": args.max_length_generation,
-        "max_new_tokens": args.max_new_tokens,
+        "max_new_tokens": args.max_length_generation,
     }
     if task.stop_words:
         gen_kwargs["stopping_criteria"] = StoppingCriteriaList(

@@ -127,7 +127,8 @@ def complete_code(
                 if task.stop_words:
                     print(f"stopping criteria: {task.stop_words}, batch[input_len]={batch['input_len']}, batch['ids'].shape[-1]={batch['ids'].shape[-1]} ")
                     gen_kwargs["stopping_criteria"][0].start_length = batch["input_len"]
-                    # gen_kwargs["stopping_criteria"][0].start_length = batch["ids"].shape[-1]
+                    # start watching **after** the actual prompt (not after padding)
+                    gen_kwargs["stopping_criteria"][0].start_length
                 generated_tokens = accelerator.unwrap_model(model).generate(
                     input_ids=batch["ids"][:, : batch["input_len"]],
                     num_return_sequences=batch_size,
