@@ -20,7 +20,7 @@ for model in "bigcode/starcoderplus"; do
             fi
         fi
         # for n in "1" "2" "4" "8"; do # this is the original loop
-        for n in "2"; do
+        for n in "2" "4" "8"; do
             # if [[ ${n} != "8" ]] && [[ ${base} != "folio" || ${model} == "gpt-4-0613" ]]; then
             #     continue
             # fi
