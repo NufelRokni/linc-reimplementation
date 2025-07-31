@@ -89,10 +89,13 @@ class FOLIOBase(OWAFOLTask):
     def get_reference(self, doc):
         return doc["label"]
 
-    def postprocess_generation(self, gen):
+    def postprocess_generation(self, gen, sample_idx=None):
+        """
+        gen: the raw LLM output (with prefix stripped)
+        sample_idx: which sample this was (unused here)
+        """
         resp = gen.strip()
         if resp not in {"True", "False", "Uncertain"}:
-            # heuristic fallback – grab the **last** legal token in the string
             import re
             hits = re.findall(r"\b(True|False|Uncertain)\b", resp, flags=re.I)
             resp = hits[-1].capitalize() if hits else self.ERROR_TOKEN
