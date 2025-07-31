@@ -44,12 +44,23 @@ class FOLIOBase(OWAFOLTask):
                 convert_to_nltk_rep(premise) for premise in sample["premises-FOL"]
             ]
             sample["conclusion-FOL"] = convert_to_nltk_rep(sample["conclusion-FOL"])
+
+            # Filter out samples with unbalanced parentheses in premises or conclusion
+            if (
+                sample["premises-FOL"].count('(') != sample["premises-FOL"].count(')')
+                or sample["conclusion-FOL"].count('(') != sample["conclusion-FOL"].count(')')
+            ):
+                print(f"Error1 in parsing FOL: {e}")
+                print(f"Sample: {sample}")
+                sample["label"] = self.ERROR_TOKEN
+                return sample
+
             try:
                 assert len(sample["premises"]) == len(sample["premises-FOL"])
                 label = evaluate(sample["premises-FOL"], sample["conclusion-FOL"])
                 assert sample["label"] == label
             except Exception as e:
-                print(f"Error in parsing FOL: {e}")
+                print(f"Error2 in parsing FOL: {e}")
                 print(f"Sample: {sample}")
                 sample["label"] = self.ERROR_TOKEN
             return sample

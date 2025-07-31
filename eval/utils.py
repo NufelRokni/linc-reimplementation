@@ -114,7 +114,7 @@ def complete_code(
     [p_0_0, p_0_1, ..., p_0_nc-1, p_1_0, ..., p_nt-1_nc-1] where nc is the number of copies of the prompt,
     and nt is the number of tasks. nc is such that num_samples(for each task)= nc * batch_size
     """
-
+    print(f"inside complete_code gen_kwargs={gen_kwargs}")
     gen_token_dict = defaultdict(list)
     try:
         for step, batch in tqdm(
@@ -125,6 +125,7 @@ def complete_code(
         ):
             with torch.no_grad():
                 if task.stop_words:
+                    print(f"stopping criteria: {task.stop_words}, batch[input_len]={batch['input_len']}, batch['ids'].shape[-1]={batch['ids'].shape[-1]} ")
                     gen_kwargs["stopping_criteria"][0].start_length = batch["input_len"]
                     # gen_kwargs["stopping_criteria"][0].start_length = batch["ids"].shape[-1]
                 generated_tokens = accelerator.unwrap_model(model).generate(
