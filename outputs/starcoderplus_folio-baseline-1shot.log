@@ -3,12 +3,12 @@ ipex flag is deprecated, will be removed in Accelerate v1.10. From 2.7.0, PyTorc
   warnings.warn(
 Selected Tasks: ['folio-baseline-1shot']
 Loading the model and tokenizer from HF (in bf16)
-Loading checkpoint shards:   0%|          | 0/7 [00:00<?, ?it/s]Loading checkpoint shards:  14%|█▍        | 1/7 [00:03<00:20,  3.39s/it]Loading checkpoint shards:  29%|██▊       | 2/7 [00:06<00:16,  3.36s/it]Loading checkpoint shards:  43%|████▎     | 3/7 [00:10<00:13,  3.44s/it]Loading checkpoint shards:  57%|█████▋    | 4/7 [00:14<00:10,  3.65s/it]Loading checkpoint shards:  71%|███████▏  | 5/7 [00:24<00:12,  6.11s/it]Loading checkpoint shards:  86%|████████▌ | 6/7 [00:30<00:06,  6.14s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:33<00:00,  5.11s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:33<00:00,  4.84s/it]
+Loading checkpoint shards:   0%|          | 0/7 [00:00<?, ?it/s]Loading checkpoint shards:  14%|█▍        | 1/7 [00:03<00:20,  3.38s/it]Loading checkpoint shards:  29%|██▊       | 2/7 [00:06<00:17,  3.43s/it]Loading checkpoint shards:  43%|████▎     | 3/7 [00:10<00:14,  3.51s/it]Loading checkpoint shards:  57%|█████▋    | 4/7 [00:14<00:11,  3.73s/it]Loading checkpoint shards:  71%|███████▏  | 5/7 [00:24<00:12,  6.01s/it]Loading checkpoint shards:  86%|████████▌ | 6/7 [00:30<00:05,  5.98s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:33<00:00,  5.09s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:33<00:00,  4.82s/it]
 /opt/conda/envs/linc/lib/python3.10/site-packages/transformers/models/auto/tokenization_auto.py:999: FutureWarning: The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.
   warnings.warn(
 number of problems for this task is 3
 Using n_copies=1 (each task will be run 1 time(s) to generate up to 5 outputs, trimming to 3).
-  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [02:23<04:46, 143.24s/it] 67%|██████▋   | 2/3 [05:01<02:32, 152.35s/it]100%|██████████| 3/3 [05:49<00:00, 104.61s/it]100%|██████████| 3/3 [05:49<00:00, 116.58s/it]
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [05:45<11:31, 345.69s/it] 67%|██████▋   | 2/3 [09:20<04:28, 268.68s/it]100%|██████████| 3/3 [14:28<00:00, 286.52s/it]100%|██████████| 3/3 [14:28<00:00, 289.41s/it]
 /app/linc-reimplementation/eval/evaluator.py:51: UserWarning: Number of tasks wasn't proportional to number of devices, we removed extra predictions
   warnings.warn(
 raw generations were saved
@@ -19,6 +19,6 @@ references were saved
     "model": "bigcode/starcoderplus"
   },
   "folio-baseline-1shot": {
-    "accuracy (pass@1 majority)": 0.3333333333333333
+    "accuracy (pass@1 majority)": 0.0
   }
 }
