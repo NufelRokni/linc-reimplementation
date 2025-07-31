@@ -14,6 +14,15 @@ _CITATION = """
 }
 """
 
+header = (
+    "The following is a first-order logic (FOL) problem.\n"
+    "The problem is to determine whether the conclusion follows from the premises.\n"
+    "The premises are given in the form of a set of first-order logic sentences.\n"
+    "The conclusion is given in the form of a single first-order logic sentence.\n"
+    "The task is to evaluate the conclusion as 'True', 'False', or 'Uncertain' given the premises.\n"
+    "\n\n"
+)
+
 
 def create_all_tasks():
     def create_task(mode, n):
@@ -28,7 +37,6 @@ def create_all_tasks():
         for mode in ["baseline", "scratchpad", "neurosymbolic", "cot"]
         for n in [1, 2, 4, 8, 16]
     }
-
 
 class FOLIOBase(OWAFOLTask):
     DATASET_PATH = "benlipkin/folio"
@@ -70,21 +78,20 @@ class FOLIOBase(OWAFOLTask):
         plus the single demonstration if self._nshot == 1.
         """
         shots = self._dataset.select(range(self._nshot))
+
         def fmt(example):
-            prem = "\n".join(example["premises"])
+            prem_block = "\n".join(example["premises"])
             return (
-                "The following is a first-order logic (FOL) problem.\n"
-                "The problem is to determine whether the conclusion follows from the premises.\n"
-                "The premises …\n\n"
-                f"<PREMISES>\n{prem}\n</PREMISES>\n"
+                header +
+                f"<PREMISES>\n{prem_block}\n</PREMISES>\n"
                 f"<CONCLUSION>\n{example['conclusion']}\n</CONCLUSION>\n"
                 "<EVALUATE>\n"
                 f"{example['label']}\n</EVALUATE>\n\n"
             )
 
-        demo_block = "".join(fmt(s) for s in shots)
-        target_block = fmt(doc).rsplit("\n<EVALUATE>\n", 1)[0] + "\n<EVALUATE>\n"
-        return demo_block + target_block
+        demo = "".join(fmt(s) for s in shots)
+        target = fmt(doc).rsplit("\n<EVALUATE>\n", 1)[0] + "\n<EVALUATE>\n"
+        return demo + target
 
     def get_reference(self, doc):
         return doc["label"]
