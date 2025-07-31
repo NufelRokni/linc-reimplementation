@@ -3,7 +3,7 @@ FOLIO: Natural Language Reasoning with First-Order Logic
 https://arxiv.org/pdf/2209.00840.pdf
 """
 from ..base import OWAFOLTask
-from utils import evaluate, convert_to_nltk_rep
+from .utils import evaluate, convert_to_nltk_rep
 
 _CITATION = """
 @article{han2022folio,

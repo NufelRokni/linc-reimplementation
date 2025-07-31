@@ -10,8 +10,8 @@ from warnings import warn
 
 from diskcache import Cache
 
-import tasks
-from generation import parallel_generations
+from . import tasks
+from .generation import parallel_generations
 
 _WARNING = """
 ################################################################################

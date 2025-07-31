@@ -1,6 +1,6 @@
 from functools import cache
 from collections import Counter
-from tasks.utils import evaluate, convert_to_nltk_rep
+from .tasks.utils import evaluate, convert_to_nltk_rep
 from abc import abstractmethod, ABC
 from datasets import load_dataset
 from warnings import warn
