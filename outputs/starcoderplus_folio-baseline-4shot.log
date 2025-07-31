@@ -1,0 +1,24 @@
+ipex flag is deprecated, will be removed in Accelerate v1.10. From 2.7.0, PyTorch has all needed optimizations for Intel CPU and XPU.
+/opt/conda/envs/linc/lib/python3.10/site-packages/transformers/models/auto/auto_factory.py:492: FutureWarning: The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.
+  warnings.warn(
+Selected Tasks: ['folio-baseline-4shot']
+Loading the model and tokenizer from HF (in bf16)
+Loading checkpoint shards:   0%|          | 0/7 [00:00<?, ?it/s]Loading checkpoint shards:  14%|█▍        | 1/7 [00:03<00:21,  3.54s/it]Loading checkpoint shards:  29%|██▊       | 2/7 [00:06<00:17,  3.47s/it]Loading checkpoint shards:  43%|████▎     | 3/7 [00:10<00:14,  3.53s/it]Loading checkpoint shards:  57%|█████▋    | 4/7 [00:14<00:10,  3.53s/it]Loading checkpoint shards:  71%|███████▏  | 5/7 [00:17<00:07,  3.54s/it]Loading checkpoint shards:  86%|████████▌ | 6/7 [00:23<00:04,  4.17s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:26<00:00,  4.02s/it]Loading checkpoint shards: 100%|██████████| 7/7 [00:26<00:00,  3.82s/it]
+/opt/conda/envs/linc/lib/python3.10/site-packages/transformers/models/auto/tokenization_auto.py:999: FutureWarning: The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.
+  warnings.warn(
+Map:   0%|          | 0/204 [00:00<?, ? examples/s]Map:   3%|▎         | 6/204 [00:00<00:04, 42.91 examples/s]Map:   9%|▉         | 19/204 [00:00<00:02, 81.66 examples/s]Map:  14%|█▍        | 29/204 [00:00<00:02, 84.27 examples/s]Map:  19%|█▉        | 39/204 [00:00<00:01, 85.04 examples/s]Map:  24%|██▍       | 49/204 [00:00<00:01, 85.74 examples/s]Map:  29%|██▉       | 59/204 [00:00<00:01, 86.47 examples/s]Map:  33%|███▎      | 68/204 [00:00<00:01, 84.42 examples/s]Map:  38%|███▊      | 78/204 [00:00<00:01, 86.01 examples/s]Map:  43%|████▎     | 87/204 [00:01<00:01, 86.42 examples/s]Map:  48%|████▊     | 98/204 [00:01<00:01, 89.46 examples/s]Map:  55%|█████▌    | 113/204 [00:01<00:00, 103.09 examples/s]Map:  62%|██████▏   | 126/204 [00:02<00:02, 38.63 examples/s] Map:  67%|██████▋   | 137/204 [00:02<00:01, 46.65 examples/s]Map:  72%|███████▏  | 146/204 [00:02<00:01, 52.10 examples/s]Map:  76%|███████▌  | 155/204 [00:02<00:00, 57.94 examples/s]Map:  81%|████████▏ | 166/204 [00:02<00:00, 66.14 examples/s]Map:  88%|████████▊ | 180/204 [00:02<00:00, 79.70 examples/s]Map:  93%|█████████▎| 190/204 [00:02<00:00, 81.06 examples/s]Map:  98%|█████████▊| 200/204 [00:02<00:00, 82.18 examples/s]Map: 100%|██████████| 204/204 [00:02<00:00, 69.33 examples/s]
+Filter:   0%|          | 0/204 [00:00<?, ? examples/s]Filter: 100%|██████████| 204/204 [00:00<00:00, 4525.03 examples/s]
+number of problems for this task is 10
+Using n_copies=1 (each task will be run 1 time(s) to generate up to 5 outputs, trimming to 5).
+  0%|          | 0/10 [00:00<?, ?it/s] 10%|█         | 1/10 [01:15<11:15, 75.08s/it] 20%|██        | 2/10 [03:01<12:28, 93.51s/it] 30%|███       | 3/10 [06:42<17:41, 151.71s/it] 40%|████      | 4/10 [08:27<13:19, 133.33s/it] 50%|█████     | 5/10 [12:14<13:54, 166.93s/it] 60%|██████    | 6/10 [14:47<10:49, 162.48s/it] 70%|███████   | 7/10 [15:28<06:08, 122.72s/it] 80%|████████  | 8/10 [20:44<06:08, 184.28s/it] 90%|█████████ | 9/10 [22:03<02:31, 151.26s/it]100%|██████████| 10/10 [26:01<00:00, 178.10s/it]100%|██████████| 10/10 [26:01<00:00, 156.18s/it]
+raw generations were saved
+processed generations were saved
+references were saved
+{
+  "config": {
+    "model": "bigcode/starcoderplus"
+  },
+  "folio-baseline-4shot": {
+    "accuracy (pass@1 majority)": 0.5
+  }
+}
