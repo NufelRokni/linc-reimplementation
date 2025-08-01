@@ -220,9 +220,18 @@ def complete_code(
                     )
                 code_gens_raw[sample].append(gen_code[len(prefix) :])
                 if postprocess:
-                    code_gens_prc[sample].append(
-                        task.postprocess_generation(gen_code[len(prefix) :], int(sample))
-                    )
+                    processed_result = task.postprocess_generation(gen_code[len(prefix) :], int(sample))
+                    code_gens_prc[sample].append(processed_result)
+                    # Debug: save postprocessing results
+                    if sample == 0 and len(code_gens_prc[sample]) == 1:  # First sample, first generation
+                        with open("debug_process_generations.txt", "w") as f:
+                            f.write(f"=== PROCESS_GENERATIONS DEBUG ===\n")
+                            f.write(f"prefix: {repr(prefix)}\n")
+                            f.write(f"len(prefix): {len(prefix)}\n")
+                            f.write(f"gen_code: {repr(gen_code)}\n")
+                            f.write(f"gen_code[len(prefix):]: {repr(gen_code[len(prefix):])}\n")
+                            f.write(f"processed_result: {repr(processed_result)}\n")
+                            f.write(f"postprocess param: {postprocess}\n")
                 else:
                     warnings.warn(
                         "model output is not postprocessed, this might lower evaluation scores"
