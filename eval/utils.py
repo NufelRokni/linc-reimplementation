@@ -129,7 +129,8 @@ def complete_code(
         ):
             with torch.no_grad():
                 if task.stop_words and "stopping_criteria" in gen_kwargs and gen_kwargs["stopping_criteria"]:
-                    if getattr(accelerator, "is_local_main_process", lambda: True)():
+                    # FIX: Use boolean attribute, not callable
+                    if accelerator.is_local_main_process:
                         print(f"Setting stopping criteria: start_length={batch['input_len']}")
                     gen_kwargs["stopping_criteria"][0].start_length = batch["input_len"]
 
