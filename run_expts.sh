@@ -39,7 +39,7 @@ for model in "bigcode/starcoderplus"; do
                 job+=" --save_generations_prc --save_generations_prc_path ${run_id}_generations_prc.json"
                 job+=" --save_references --save_references_path ${run_id}_references.json"
                 job+=" --save_results --save_results_path ${run_id}_results.json"
-                job+=" | tee ${outdir}/${run_id}.log"; exit"
+                job+=" | tee ${outdir}/${run_id}.log; exit"
                 export JOB=${job}; bash SUBMIT.sh
                 echo "Submitted ${run_id}"
             done
