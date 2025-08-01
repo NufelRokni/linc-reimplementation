@@ -1,18 +1,18 @@
 from collections import defaultdict
 import math
 import warnings
+import logging
 
 import torch
 from torch.utils.data import IterableDataset
 from tqdm import tqdm
 
-INFILL_MODE = False
+logger = logging.getLogger(__name__)
 
 
 class TokenizedDataset(IterableDataset):
-    """Tokenize and preprocess the dataset
+    """Tokenize and preprocess the dataset.
     Multiple copies of the same prompt are sent sequentially.
-    See compute_code for more details.
     """
 
     def __init__(
@@ -34,33 +34,36 @@ class TokenizedDataset(IterableDataset):
         self.n_tasks = n_tasks
         self.n_copies = n_copies
         self.prefix = prefix
+        self.infill_mode = False  # store state in this instance
 
     def __iter__(self):
         prompts = []
-        infill = []
+        infill_flags = []
         for sample in range(self.n_tasks):
             prompt_contents = self.task.get_prompt(self.dataset[sample])
             if isinstance(prompt_contents, str):
-                infill.append(False)
+                infill_flags.append(False)
                 prompt = self.prefix + prompt_contents
             elif isinstance(prompt_contents, dict):
                 assert set(prompt_contents.keys()) == {"prefix", "suffix"}
-                infill.append(True)
+                infill_flags.append(True)
                 prompt = self.prefix + self._make_infill_prompt(**prompt_contents)
             else:
                 raise ValueError(f"Unsupported prompt format: {type(prompt_contents)}")
             prompts.append(prompt)
 
-        if not len(set(infill)) == 1:
+        if not len(set(infill_flags)) == 1:
             raise ValueError("Mixed infill and completion prompts are not supported.")
-        global INFILL_MODE
-        INFILL_MODE = infill[0]
-        if INFILL_MODE:
+
+        # Save the infill mode in the instance; avoid any global state.
+        self.infill_mode = infill_flags[0]
+
+        if self.infill_mode:
             return_token_type_ids = False
         else:
             return_token_type_ids = None
 
-        outputs = self.tokenizer(
+        tokenized_outputs = self.tokenizer(
             prompts,
             padding=True,
             truncation=True,
@@ -72,15 +75,15 @@ class TokenizedDataset(IterableDataset):
         if self.n_copies == 1 and self.n_tasks % self.num_devices != 0:
             self.n_copies = 2
             warnings.warn(
-                "n_copies (n_samples/batch_size) was changed from 1 to 2 because n_tasks isn't proportional to num devices"
+                "n_copies was changed from 1 to 2 because n_tasks isn't proportional to num devices"
             )
 
         for sample in range(self.n_tasks):
             for _ in range(self.n_copies):
                 yield {
-                    "ids": outputs.input_ids[sample],
+                    "ids": tokenized_outputs.input_ids[sample],
                     "task_id": sample,
-                    "input_len": outputs.attention_mask[sample].sum(),
+                    "input_len": tokenized_outputs.attention_mask[sample].sum(),
                 }
 
     def _make_infill_prompt(self, prefix, suffix):
@@ -110,11 +113,12 @@ def complete_code(
     **gen_kwargs,
 ):
     """Generate multiple codes for each task in the dataset using multiple GPUs with accelerate.
-    dataloader sends all the prompts from the evalution dataset to the model as the following:
-    [p_0_0, p_0_1, ..., p_0_nc-1, p_1_0, ..., p_nt-1_nc-1] where nc is the number of copies of the prompt,
-    and nt is the number of tasks. nc is such that num_samples(for each task)= nc * batch_size
+    dataloader sends all the prompts from the evaluation dataset to the model as the following:
+    [p_0_0, p_0_1, ..., p_0_nc-1, p_1_0, ..., p_nt-1_nc-1] 
+    where nc is the number of copies of the prompt, and nt is the number of tasks.
+    nc is such that num_samples (for each task)= nc * batch_size.
     """
-    print(f"inside complete_code gen_kwargs={gen_kwargs}")
+    logger.debug(f"inside complete_code gen_kwargs={gen_kwargs}")
     gen_token_dict = defaultdict(list)
     try:
         for step, batch in tqdm(
@@ -124,17 +128,17 @@ def complete_code(
             ),
         ):
             with torch.no_grad():
-                if task.stop_words:
-                    print(f"stopping criteria: {task.stop_words}, batch[input_len]={batch['input_len']}, batch['ids'].shape[-1]={batch['ids'].shape[-1]} ")
+                if task.stop_words and "stopping_criteria" in gen_kwargs and gen_kwargs["stopping_criteria"]:
+                    if getattr(accelerator, "is_local_main_process", lambda: True)():
+                        print(f"Setting stopping criteria: start_length={batch['input_len']}")
                     gen_kwargs["stopping_criteria"][0].start_length = batch["input_len"]
-                    # start watching **after** the actual prompt (not after padding)
-                    gen_kwargs["stopping_criteria"][0].start_length
 
                 # Print the full prompt before generation
                 input_ids = batch["ids"][0]
-                print("\n── FULL PROMPT (decoded) ──\n" +
-                      tokenizer.decode(input_ids, skip_special_tokens=False) +
-                      "\n── END PROMPT ──\n")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("\n── FULL PROMPT (decoded) ──\n" +
+                          tokenizer.decode(input_ids, skip_special_tokens=False) +
+                          "\n── END PROMPT ──\n")
 
                 generated_tokens = accelerator.unwrap_model(model).generate(
                     input_ids=batch["ids"][:, : batch["input_len"]],
@@ -162,48 +166,76 @@ def complete_code(
     def parse_infill(code, tokenizer):
         """Reorder infill code and remove remaining special tokens."""
         model_id = tokenizer.name_or_path
-        if model_id in ["facebook/incoder-1B", "facebook/incoder-6B"]:
-            prefix, suffix, infill = code.split("<|mask:0|>", 2)
-            infill = infill.split("<|endofmask|>")[0]
-        elif model_id in ["bigcode/santacoder"]:
-            prefix, rest = code.split("<fim-suffix>", 1)
-            suffix, infill = rest.split("<fim-middle>", 1)
-            infill = infill.split("<|endoftext|>")[0]
-        else:
-            raise ValueError(f"Infilling not yet supported for: {model_id}")
-        code = "".join([prefix, infill, suffix])
-        for k, v in tokenizer.special_tokens_map.items():
-            if k == "additional_special_tokens":
-                for t in v:
-                    code = code.replace(t, "")
+        try:
+            if model_id in ["facebook/incoder-1B", "facebook/incoder-6B"]:
+                parts = code.split("<|mask:0|>", 2)
+                if len(parts) < 3:
+                    warnings.warn(f"Could not find expected infill markers in generated code")
+                    return code
+                prefix, suffix, infill = parts
+                infill = infill.split("<|endofmask|>")[0]
+            elif model_id in ["bigcode/santacoder"]:
+                if "<fim-suffix>" not in code or "<fim-middle>" not in code:
+                    warnings.warn(f"Could not find expected infill markers in generated code")
+                    return code
+                prefix, rest = code.split("<fim-suffix>", 1)
+                suffix, infill = rest.split("<fim-middle>", 1)
+                infill = infill.split("<|endoftext|>")[0]
             else:
-                code = code.replace(v, "")
-        return code
+                raise ValueError(f"Infilling not yet supported for: {model_id}")
+            
+            code = "".join([prefix, infill, suffix])
+            for k, v in tokenizer.special_tokens_map.items():
+                if k == "additional_special_tokens":
+                    for t in v:
+                        code = code.replace(t, "")
+                else:
+                    code = code.replace(v, "")
+            return code
+        except Exception as e:
+            warnings.warn(f"Error parsing infill: {e}")
+            return code
 
-    code_gens_raw = [[] for _ in range(n_tasks)]
-    code_gens_prc = [[] for _ in range(n_tasks)]
-    for sample, generated_tokens in gen_token_dict.items():
-        for s in generated_tokens:
-            if INFILL_MODE:
-                gen_code = parse_infill(
-                    tokenizer.decode(
-                        s, skip_special_tokens=False, clean_up_tokenization_spaces=False
-                    ),
-                    tokenizer,
-                )
-            else:
-                gen_code = tokenizer.decode(
-                    s, skip_special_tokens=True, clean_up_tokenization_spaces=True
-                )
-            code_gens_raw[sample].append(gen_code[len(prefix) :])
-            if postprocess:
-                code_gens_prc[sample].append(
-                    task.postprocess_generation(gen_code[len(prefix) :], int(sample))
-                )
-            else:
-                warnings.warn(
-                    "model output is not postprocessed, this might lower evaluation scores"
-                )
-                code_gens_prc[sample].append(gen_code[len(prefix) :])
+    def process_generations(gen_token_dict, tokenizer, prefix, n_tasks, task, infill_mode, postprocess):
+        code_gens_raw = [[] for _ in range(n_tasks)]
+        code_gens_prc = [[] for _ in range(n_tasks)]
+        for sample, generated_tokens in gen_token_dict.items():
+            for s in generated_tokens:
+                if infill_mode:
+                    gen_code = parse_infill(
+                        tokenizer.decode(
+                            s, skip_special_tokens=False, clean_up_tokenization_spaces=False
+                        ),
+                        tokenizer,
+                    )
+                else:
+                    gen_code = tokenizer.decode(
+                        s, skip_special_tokens=True, clean_up_tokenization_spaces=True
+                    )
+                code_gens_raw[sample].append(gen_code[len(prefix) :])
+                if postprocess:
+                    code_gens_prc[sample].append(
+                        task.postprocess_generation(gen_code[len(prefix) :], int(sample))
+                    )
+                else:
+                    warnings.warn(
+                        "model output is not postprocessed, this might lower evaluation scores"
+                    )
+                    code_gens_prc[sample].append(gen_code[len(prefix) :])
+
+        return code_gens_prc, code_gens_raw
+
+    # Instead of using a global INFILL_MODE, get it from the tokenized dataset:
+    infill_mode = dataloader.dataset.infill_mode
+
+    code_gens_raw, code_gens_prc = process_generations(
+        gen_token_dict, tokenizer, prefix, n_tasks, task, infill_mode, postprocess
+    )
+
+    if batch_size > 16 and not getattr(accelerator, "split_batches", False):
+        warnings.warn(
+            f"Large batch_size ({batch_size}) might cause CUDA OOM errors. "
+            "Consider using accelerator with split_batches=True or reducing batch_size."
+        )
 
     return code_gens_prc, code_gens_raw

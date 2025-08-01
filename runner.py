@@ -62,22 +62,26 @@ def main():
         }
         if args.precision not in dict_precisions:
             raise ValueError(
-                f"Non valid precision {args.precision}, choose from: fp16, fp32, bf16"
+                f"Invalid precision '{args.precision}'. Choose from: fp16, fp32, bf16."
             )
         print(f"Loading the model and tokenizer from HF (in {args.precision})")
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model,
-            revision=args.revision,
-            torch_dtype=dict_precisions[args.precision],
-            trust_remote_code=args.trust_remote_code,
-            use_auth_token=args.use_auth_token,
-        )
-        tokenizer = AutoTokenizer.from_pretrained(
-            args.model,
-            revision=args.revision,
-            use_auth_token=args.use_auth_token,
-            truncation_side="left",
-        )
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                args.model,
+                revision=args.revision,
+                torch_dtype=dict_precisions[args.precision],
+                trust_remote_code=args.trust_remote_code,
+                token=args.use_auth_token,  # or just token=args.token
+            )
+            tokenizer = AutoTokenizer.from_pretrained(
+                args.model,
+                revision=args.revision,
+                token=args.use_auth_token,
+                truncation_side="left",
+            )
+        except Exception as e:
+            print(f"Error loading model or tokenizer: {e}")
+            return
         if not tokenizer.eos_token:
             if tokenizer.bos_token:
                 tokenizer.eos_token = tokenizer.bos_token

@@ -253,7 +253,11 @@ class OWAFOLTask(Task):
             sample from the test dataset
         :return: str
         """
-        return doc["label"]
+        try:
+            return doc["label"]
+        except KeyError:
+            print(f"Warning: Document missing 'label' key: {doc.keys()}")
+            return self.ERROR_TOKEN
 
     def postprocess_generation(self, generation, idx, completion_only=False):
         """
@@ -329,13 +333,13 @@ class OWAFOLTask(Task):
     def fewshot_examples(self):
         """
         Returns a few-shot example for the task.
-        :param n: int
-            number of examples
-        :param seed: int
-            seed for random number generator
         :return: str
         """
-        examples = []
-        for doc in self._train.select(range(self._nshot)):
-            examples.append(self.format_train_example(doc))
-        return "\n".join(examples)
+        try:
+            examples = []
+            for doc in self._train.select(range(self._nshot)):
+                examples.append(self.format_train_example(doc))
+            return "\n".join(examples)
+        except Exception as e:
+            print(f"Error generating few-shot examples: {e}")
+            return ""  # Return empty string as fallback

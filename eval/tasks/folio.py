@@ -34,24 +34,43 @@ class FOLIOBase(OWAFOLTask):
 
     def __init__(self, mode, n, seed=7):
         super().__init__(mode, n)
-        # process validation dataset
-        self._dataset = self.reformat_fol_samples(self.dataset["validation"]).shuffle(seed)
-        self._test = self._dataset.select(range(0, len(self._dataset)))
+        try:
+            processed_dataset = self.reformat_fol_samples(self.dataset["validation"])
+            if len(processed_dataset) == 0:
+                print(f"Warning: Processed dataset is empty for {mode}-{n}shot")
+            self._dataset = processed_dataset.shuffle(seed)
+            self._test = self._dataset.select(range(len(self._dataset)))
+        except Exception as e:
+            print(f"Error initializing FOLIO task: {e}")
+            raise
 
     def reformat_fol_samples(self, dataset):
+        """
+        Process and validate FOL samples, filtering out invalid ones.
+        
+        Args:
+            dataset: HuggingFace dataset containing FOL premises and conclusions
+            
+        Returns:
+            Filtered dataset containing only valid FOL examples
+        """
         def reformat_fol_sample(sample):
-            sample["premises-FOL"] = [
-                convert_to_nltk_rep(premise) for premise in sample["premises-FOL"]
-            ]
-            sample["conclusion-FOL"] = convert_to_nltk_rep(sample["conclusion-FOL"])
+            try:
+                sample["premises-FOL"] = [
+                    convert_to_nltk_rep(premise) for premise in sample["premises-FOL"]
+                ]
+                sample["conclusion-FOL"] = convert_to_nltk_rep(sample["conclusion-FOL"])
+            except Exception as e:
+                # print(f"Error converting to NLTK representation: {e}")
+                sample["label"] = self.ERROR_TOKEN
+                return sample
 
-            # Filter out samples with unbalanced parentheses in premises or conclusion
+            # Check if any premise has unbalanced parentheses
             if (
-                sample["premises-FOL"].count('(') != sample["premises-FOL"].count(')')
+                any(premise.count('(') != premise.count(')') for premise in sample["premises-FOL"])
                 or sample["conclusion-FOL"].count('(') != sample["conclusion-FOL"].count(')')
             ):
-                # print(f"Error1 in parsing FOL: count mismatch in premises or conclusion.")
-                # print(f"Sample: {sample}")
+                # print(f"Error: unbalanced parentheses in premises or conclusion.")
                 sample["label"] = self.ERROR_TOKEN
                 return sample
 
@@ -60,8 +79,7 @@ class FOLIOBase(OWAFOLTask):
                 label = evaluate(sample["premises-FOL"], sample["conclusion-FOL"])
                 assert sample["label"] == label
             except Exception as e:
-                # print(f"Error2 in parsing FOL: {e}")
-                # print(f"Sample: {sample}")
+                # print(f"Error in parsing FOL: {e}")
                 sample["label"] = self.ERROR_TOKEN
             return sample
 

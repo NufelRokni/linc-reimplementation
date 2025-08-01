@@ -1,15 +1,8 @@
-from concurrent.futures import ThreadPoolExecutor
-import hashlib
-import time
-import random
 import json
 import os
-import warnings
+
 from abc import abstractmethod, ABC
-from warnings import warn
-
-from diskcache import Cache
-
+import warnings
 from . import tasks
 from .generation import parallel_generations
 
@@ -41,13 +34,16 @@ class Evaluator(ABC):
         pass
 
     def evaluate(self, task_name):
+        print(f"Evaluating task: {task_name}")
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
         task = tasks.get_task(task_name)
         if task.requires_execution and not self.allow_code_execution:
+            print(f"eval.evaluate: {task_name} requires code execution, but allow_code_execution is False")
             raise ValueError(_WARNING)
 
         generations_prc, generations_raw, references = self.generate_text(task_name)
         if len(generations_prc[0]) != self.args.n_samples:
-            generations_prc = [l[: self.args.n_samples] for l in generations_prc]
+            generations_prc = [samples[: self.args.n_samples] for samples in generations_prc]
             warnings.warn(
                 "Number of tasks wasn't proportional to number of devices, we removed extra predictions"
             )
@@ -55,9 +51,13 @@ class Evaluator(ABC):
         if not hasattr(self, "accelerator") or self.accelerator.is_main_process:
             if not self.args.generations_path:
                 if self.args.save_generations_raw:
-                    with open(self.args.save_generations_raw_path, "w") as fp:
-                        json.dump(generations_raw, fp)
-                        print("raw generations were saved")
+                    try:
+                        os.makedirs(os.path.dirname(self.args.save_generations_raw_path), exist_ok=True)
+                        with open(self.args.save_generations_raw_path, "w") as fp:
+                            json.dump(generations_raw, fp)
+                            print("raw generations were saved")
+                    except Exception as e:
+                        warnings.warn(f"Failed to save raw generations: {e}")
                 if self.args.save_generations_prc:
                     with open(self.args.save_generations_prc_path, "w") as fp:
                         json.dump(generations_prc, fp)
@@ -67,11 +67,9 @@ class Evaluator(ABC):
                         json.dump(references, fp)
                         print("references were saved")
 
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"
             if self.allow_code_execution and task.requires_execution:
                 os.environ["HF_ALLOW_CODE_EVAL"] = "1"
-            results = task.process_results(generations_prc, references)
-            return results
+            return task.process_results(generations_prc, references)
 
 
 class HFEvaluator(Evaluator):
@@ -82,17 +80,32 @@ class HFEvaluator(Evaluator):
         self.tokenizer = tokenizer
 
     def generate_text(self, task_name):
+        print(f"Generating text for task: {task_name}")
         task = tasks.get_task(task_name)
         dataset = task.get_dataset()
-        n_tasks = self.args.limit if self.args.limit else len(dataset)
-        generations_prc, generations_raw = parallel_generations(
-            task,
-            dataset,
-            self.accelerator,
-            self.model,
-            self.tokenizer,
-            n_tasks=n_tasks,
-            args=self.args,
-        )
-        references = [task.get_reference(dataset[i]) for i in range(n_tasks)]
-        return generations_prc, generations_raw, references
+        if len(dataset) == 0:
+            warnings.warn(f"Empty dataset for task {task_name}")
+            return [], [], []
+            
+        n_tasks = min(len(dataset), self.args.limit) if self.args.limit else len(dataset)
+        try:
+            generations_prc, generations_raw = parallel_generations(
+                task,
+                dataset,
+                self.accelerator,
+                self.model,
+                self.tokenizer,
+                n_tasks=n_tasks,
+                args=self.args,
+            )
+            references = []
+            for i in range(n_tasks):
+                try:
+                    references.append(task.get_reference(dataset[i]))
+                except Exception as e:
+                    warnings.warn(f"Failed to get reference for sample {i}: {e}")
+                    references.append(None)  # Or an appropriate default
+            return generations_prc, generations_raw, references
+        except Exception as e:
+            warnings.warn(f"Error during generation for task {task_name}: {e}")
+            return [], [], []
