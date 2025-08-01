@@ -280,6 +280,14 @@ class OWAFOLTask(Task):
                             f.write(f"RAW OUTPUT:\n{gen_code}\n\n")
                             f.write(f"CONTAINS STOP WORD: {'</EVALUATE>' in gen_code}\n")
 
+            # Debug: Save detailed postprocessing info
+            if idx == 0:  # Debug first sample
+                with open("debug_postprocess.txt", "w") as f:
+                    f.write(f"=== POSTPROCESS DEBUG ===\n")
+                    f.write(f"Original generation:\n{repr(generation)}\n\n")
+                    f.write(f"completion_only: {completion_only}\n")
+                    f.write(f"Mode: {self._mode}\n\n")
+
             if completion_only:
                 gen = generation.strip()
             else:
@@ -290,6 +298,12 @@ class OWAFOLTask(Task):
                 gen = generation[len(prefix) :].strip()
                 for stop_word in self.stop_words:
                     gen = gen.split(stop_word)[0].strip()
+            
+            # Debug: Save intermediate processing
+            if idx == 0:
+                with open("debug_postprocess.txt", "a") as f:
+                    f.write(f"After prefix removal and stop word processing:\n{repr(gen)}\n\n")
+
             if self._mode == "baseline":
                 resp = gen.strip()
             elif self._mode == "scratchpad":
@@ -309,9 +323,21 @@ class OWAFOLTask(Task):
                 resp = gen.split(flag)[-1].strip()
             else:
                 raise ValueError(f"Invalid mode: {self._mode}")
+            
+            # Debug: Save final response
+            if idx == 0:
+                with open("debug_postprocess.txt", "a") as f:
+                    f.write(f"Final response before assertion: {repr(resp)}\n")
+                    f.write(f"Is valid? {resp in ['True', 'False', 'Uncertain']}\n\n")
+
             assert resp in ["True", "False", "Uncertain"], f"Invalid generation: {resp}"
             return resp
         except Exception as e:
+            # Debug: Save error details
+            if idx == 0:
+                with open("debug_postprocess.txt", "a") as f:
+                    f.write(f"ERROR: {e}\n")
+                    f.write(f"Returning ERROR_TOKEN: {self.ERROR_TOKEN}\n")
             # TODO: explore failure cases and improve postprocessing
             print(f"Error in parsing and/or evaluating LLM output: {e}")
             return self.ERROR_TOKEN
