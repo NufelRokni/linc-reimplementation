@@ -129,6 +129,13 @@ def complete_code(
                     gen_kwargs["stopping_criteria"][0].start_length = batch["input_len"]
                     # start watching **after** the actual prompt (not after padding)
                     gen_kwargs["stopping_criteria"][0].start_length
+
+                # Print the full prompt before generation
+                input_ids = batch["ids"][0]
+                print("\n── FULL PROMPT (decoded) ──\n" +
+                      tokenizer.decode(input_ids, skip_special_tokens=False) +
+                      "\n── END PROMPT ──\n")
+
                 generated_tokens = accelerator.unwrap_model(model).generate(
                     input_ids=batch["ids"][:, : batch["input_len"]],
                     num_return_sequences=batch_size,
