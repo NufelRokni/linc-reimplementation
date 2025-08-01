@@ -21,7 +21,7 @@ def create_all_tasks():
     return {
         f"proofwriter-{mode}-{n}shot": create_task(mode, n)
         for mode in ["baseline", "scratchpad", "neurosymbolic", "cot"]
-        for n in [1, 2, 4, 8, 16]
+        for n in [0, 1, 2, 4, 8, 16]
     }
 
 
