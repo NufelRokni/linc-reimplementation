@@ -296,8 +296,11 @@ class OWAFOLTask(Task):
                     prefix
                 ), "Increase `--max_length_generation` to avoid truncation"
                 gen = generation[len(prefix) :].strip()
+                # More robust stop word processing - take everything before the first stop word
                 for stop_word in self.stop_words:
-                    gen = gen.split(stop_word)[0].strip()
+                    if stop_word in gen:
+                        gen = gen.split(stop_word)[0].strip()
+                        break
             
             # Debug: Save intermediate processing
             if idx == 0:
