@@ -232,7 +232,7 @@ def complete_code(
     # Instead of using a global INFILL_MODE, get it from the tokenized dataset:
     infill_mode = dataloader.dataset.infill_mode
 
-    code_gens_raw, code_gens_prc = process_generations(
+    code_gens_prc, code_gens_raw = process_generations(
         gen_token_dict, tokenizer, prefix, n_tasks, task, infill_mode, postprocess
     )
 
