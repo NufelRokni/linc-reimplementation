@@ -42,6 +42,11 @@ class Evaluator(ABC):
             raise ValueError(_WARNING)
 
         generations_prc, generations_raw, references = self.generate_text(task_name)
+        # Add this block to avoid IndexError
+        if not generations_prc or not isinstance(generations_prc, list) or len(generations_prc) == 0:
+            warnings.warn(f"No generations produced for task {task_name}. Skipping evaluation.")
+            return None
+
         if len(generations_prc[0]) != self.args.n_samples:
             generations_prc = [samples[: self.args.n_samples] for samples in generations_prc]
             warnings.warn(
