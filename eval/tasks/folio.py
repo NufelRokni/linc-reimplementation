@@ -50,7 +50,7 @@ class FOLIOBase(OWAFOLTask):
                 sample["premises-FOL"].count('(') != sample["premises-FOL"].count(')')
                 or sample["conclusion-FOL"].count('(') != sample["conclusion-FOL"].count(')')
             ):
-                print(f"Error1 in parsing FOL: {e}")
+                print(f"Error1 in parsing FOL: count mismatch in premises or conclusion.")
                 print(f"Sample: {sample}")
                 sample["label"] = self.ERROR_TOKEN
                 return sample
