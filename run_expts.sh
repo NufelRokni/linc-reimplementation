@@ -31,7 +31,7 @@ for model in "bigcode/starcoderplus"; do
                 job="cd $(pwd); source activate linc; accelerate launch runner.py"
                 job+=" --model ${model} --precision bf16"
                 job+=" --use_auth_token"
-                job+=" --tasks ${task} --n_samples 1 --batch_size ${batch_size}"
+                job+=" --tasks ${task} --n_samples 1 --batch_size 1"
                 job+=" --max_length_generation ${max_length} --temperature 0.8"
                 job+=" --allow_code_execution --trust_remote_code --output_dir ${outdir}"
                 job+=" --limit 1 --max_new_tokens 128"

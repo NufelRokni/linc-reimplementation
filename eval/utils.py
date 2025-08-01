@@ -140,6 +140,9 @@ def complete_code(
                     logger.debug("\n── FULL PROMPT (decoded) ──\n" +
                           tokenizer.decode(input_ids, skip_special_tokens=False) +
                           "\n── END PROMPT ──\n")
+                if accelerator.is_local_main_process:
+                    with open("debug_prompt.txt", "w") as f:
+                        f.write(tokenizer.decode(batch["ids"][0], skip_special_tokens=False))
 
                 generated_tokens = accelerator.unwrap_model(model).generate(
                     input_ids=batch["ids"][:, : batch["input_len"]],

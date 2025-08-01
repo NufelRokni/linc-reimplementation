@@ -269,6 +269,17 @@ class OWAFOLTask(Task):
         :return: str
         """
         try:
+            # Debug: Save raw output for the first sample and first generation
+            if hasattr(self, "debug_gen_token_dict"):
+                sample = idx
+                generated_tokens = self.debug_gen_token_dict.get(sample, [])
+                for i, s in enumerate(generated_tokens):
+                    gen_code = s if isinstance(s, str) else str(s)
+                    if getattr(self, "is_local_main_process", False) and sample == 0 and i == 0:
+                        with open("debug_raw_output.txt", "w") as f:
+                            f.write(f"RAW OUTPUT:\n{gen_code}\n\n")
+                            f.write(f"CONTAINS STOP WORD: {'</EVALUATE>' in gen_code}\n")
+
             if completion_only:
                 gen = generation.strip()
             else:
@@ -339,6 +350,10 @@ class OWAFOLTask(Task):
             examples = []
             for doc in self._train.select(range(self._nshot)):
                 examples.append(self.format_train_example(doc))
+            # Debug: Save the first few-shot example to a file
+            if examples:
+                with open("debug_examples.txt", "w") as f:
+                    f.write(examples[0])
             return "\n".join(examples)
         except Exception as e:
             print(f"Error generating few-shot examples: {e}")
