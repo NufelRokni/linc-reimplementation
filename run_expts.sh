@@ -5,7 +5,8 @@ set -e
 outdir="outputs"
 mkdir -p ${outdir}
 
-for model in "bigcode/starcoderplus"; do
+for model in "mistralai/Mistral-7B-v0.1"; do
+# for model in "bigcode/starcoderplus"; do
     # for base in "folio" "proofwriter"; do
     for base in "folio"; do
         if [[ ${model} == "bigcode/starcoderplus" ]]; then
@@ -25,16 +26,16 @@ for model in "bigcode/starcoderplus"; do
             #     continue
             # fi
             # for mode in "baseline" "scratchpad" "cot" "neurosymbolic"; do # this is the original loop
-            for mode in "baseline"; do
+            for mode in "neurosymbolic"; do
                 task="${base}-${mode}-${n}shot"
                 run_id="${model#*/}_${task}"
                 job="cd $(pwd); source activate linc; accelerate launch runner.py"
                 job+=" --model ${model} --precision bf16"
                 job+=" --use_auth_token"
-                job+=" --tasks ${task} --n_samples 1 --batch_size 1"
+                job+=" --tasks ${task} --n_samples 10 --batch_size 1"
                 job+=" --max_length_generation ${max_length} --temperature 0.8"
                 job+=" --allow_code_execution --trust_remote_code --output_dir ${outdir}"
-                job+=" --limit 1 --max_new_tokens 2048"
+                job+=" --limit 3 --max_new_tokens 1024"
                 job+=" --save_generations_raw --save_generations_raw_path ${run_id}_generations_raw.json"
                 job+=" --save_generations_prc --save_generations_prc_path ${run_id}_generations_prc.json"
                 job+=" --save_references --save_references_path ${run_id}_references.json"

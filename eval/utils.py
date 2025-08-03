@@ -2,6 +2,7 @@ from collections import defaultdict
 import math
 import warnings
 import logging
+import os
 
 import torch
 from torch.utils.data import IterableDataset
@@ -143,7 +144,8 @@ def complete_code(
                           tokenizer.decode(input_ids, skip_special_tokens=False) +
                           "\n── END PROMPT ──\n")
                 if accelerator.is_local_main_process:
-                    with open("debug_prompt.txt", "w") as f:
+                    os.makedirs("debug", exist_ok=True)
+                    with open("debug/debug_prompt.txt", "w") as f:
                         f.write(tokenizer.decode(batch["ids"][0], skip_special_tokens=False))
 
                 generated_tokens = accelerator.unwrap_model(model).generate(
@@ -224,7 +226,8 @@ def complete_code(
                     code_gens_prc[sample].append(processed_result)
                     # Debug: save postprocessing results
                     if sample == 0 and len(code_gens_prc[sample]) == 1:  # First sample, first generation
-                        with open("debug_process_generations.txt", "w") as f:
+                        os.makedirs("debug", exist_ok=True)
+                        with open("debug/debug_process_generations.txt", "w") as f:
                             f.write(f"=== PROCESS_GENERATIONS DEBUG ===\n")
                             f.write(f"prefix: {repr(prefix)}\n")
                             f.write(f"len(prefix): {len(prefix)}\n")

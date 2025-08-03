@@ -4,6 +4,7 @@ from nltk.sem import logic
 from nltk.sem import Expression
 import warnings
 import functools
+import os
 
 # Instead of directly modifying NLTK internals:
 try:
@@ -17,7 +18,7 @@ except AttributeError:
 read_expr = Expression.fromstring
 
 try:
-    prover = nltk.Prover9(10)  # 10-second timeout
+    prover = nltk.Prover9(30)  # 10-second timeout
 except (AttributeError, ImportError) as e:
     warnings.warn(f"Error initializing Prover9: {e}. Using default prover.")
     # Fallback to another prover or a dummy implementation
@@ -162,16 +163,68 @@ def reformat_fol(fol):
 
 @functools.lru_cache(maxsize=128)
 def evaluate(premises_tuple, conclusion):
+    print(f"DEBUG[utils.py]: evaluate called with premises={premises_tuple}, conclusion={conclusion}")
     try:
         # Convert tuple back to list (since tuples are hashable for caching)
         premises = list(premises_tuple)
 
-        premises = [reformat_fol(p) for p in premises]
-        conclusion = reformat_fol(conclusion)
+        # Extract all predicate names from the premises and conclusion
+        def extract_predicates(formula):
+            # Find all tokens that look like predicates (uppercase followed by parenthesis)
+            predicate_pattern = r'([A-Z][a-zA-Z0-9_]*)\('
+            return set(re.findall(predicate_pattern, formula))
+        
+        # Fix arity conflicts by renaming constants with the same name as predicates
+        def fix_arity_conflicts(formula, predicates):
+            # For each predicate, find instances where it's used as a constant
+            for pred in predicates:
+                # Replace when used as a constant (not followed by opening parenthesis)
+                # but only when it's a whole word (bounded by word boundaries)
+                formula = re.sub(r'\b' + pred + r'\b(?!\()', pred + '_CONST', formula)
+            return formula
+        
+        # Create debug directory
+        os.makedirs("debug", exist_ok=True)
+        
+        # First, extract all predicate names from premises and conclusion
+        all_predicates = set()
+        for p in premises:
+            all_predicates.update(extract_predicates(p))
+        all_predicates.update(extract_predicates(conclusion))
+        
+        # Debug: log the detected predicates
+        with open("debug/debug_predicates.txt", "w") as f:
+            f.write("Detected predicates:\n")
+            for p in sorted(all_predicates):
+                f.write(f"  {p}\n")
+        
+        # Now fix arity conflicts in all formulas
+        fixed_premises = [fix_arity_conflicts(p, all_predicates) for p in premises]
+        fixed_conclusion = fix_arity_conflicts(conclusion, all_predicates)
+        
+        # Debug: log the fixed formulas
+        with open("debug/debug_fixed_formulas.txt", "w") as f:
+            f.write("Original premises:\n")
+            for p in premises:
+                f.write(f"  {p}\n")
+            f.write("\nFixed premises:\n")
+            for p in fixed_premises:
+                f.write(f"  {p}\n")
+            f.write(f"\nOriginal conclusion: {conclusion}\n")
+            f.write(f"Fixed conclusion: {fixed_conclusion}\n")
+        
+        # Continue with your existing code, but use the fixed versions
+        premises = [reformat_fol(p) for p in fixed_premises]
+        conclusion = reformat_fol(fixed_conclusion)
+
+        # Debug: print reformatted premises and conclusion
+        print(f"[DEBUG] Premises: {premises}")
+        print(f"[DEBUG] Conclusion: {conclusion}")
 
         # Validate that premises and conclusion are non-empty
         if not conclusion or not all(premises):
             warnings.warn("Empty premise or conclusion detected")
+            print("[DEBUG] Empty premise or conclusion detected")
             return "Uncertain"
 
         c = read_expr(conclusion)
@@ -179,17 +232,33 @@ def evaluate(premises_tuple, conclusion):
         for p in premises:
             p_list.append(read_expr(p))
         
+        # Debug: print parsed expressions
+        print(f"[DEBUG] Parsed conclusion: {c}")
+        print(f"[DEBUG] Parsed premises: {p_list}")
+
         # Add timeout handling
         truth_value = prover.prove(c, p_list)
+        print(f"[DEBUG] Prover result for conclusion: {truth_value}")
         if truth_value:
             return "True"
         else:
             neg_c = read_expr("-(" + conclusion + ")")
             negation_true = prover.prove(neg_c, p_list)
+            print(f"[DEBUG] Prover result for negated conclusion: {negation_true}")
             if negation_true:
                 return "False"
             else:
                 return "Uncertain"
     except Exception as e:
         warnings.warn(f"Error in FOL evaluation: {e}")
+        print(f"[DEBUG] Exception in evaluate: {e}")
+        
+        # Save error details to debug file
+        with open("debug/debug_evaluate_error.txt", "w") as f:
+            f.write(f"Error: {e}\n\n")
+            f.write(f"Premises:\n")
+            for p in premises_tuple:
+                f.write(f"  {p}\n")
+            f.write(f"Conclusion: {conclusion}\n")
+            
         return "Uncertain"  # Default to uncertain on error

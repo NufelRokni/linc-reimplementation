@@ -4,6 +4,7 @@ from .tasks.utils import evaluate, convert_to_nltk_rep
 from abc import abstractmethod, ABC
 from datasets import load_dataset
 from warnings import warn
+import os
 
 
 class Task(ABC):
@@ -276,13 +277,15 @@ class OWAFOLTask(Task):
                 for i, s in enumerate(generated_tokens):
                     gen_code = s if isinstance(s, str) else str(s)
                     if getattr(self, "is_local_main_process", False) and sample == 0 and i == 0:
-                        with open("debug_raw_output.txt", "w") as f:
+                        os.makedirs("debug", exist_ok=True)
+                        with open("debug/debug_raw_output.txt", "w") as f:
                             f.write(f"RAW OUTPUT:\n{gen_code}\n\n")
                             f.write(f"CONTAINS STOP WORD: {'</EVALUATE>' in gen_code}\n")
 
             # Debug: Save detailed postprocessing info
             if idx == 0:  # Debug first sample
-                with open("debug_postprocess.txt", "w") as f:
+                os.makedirs("debug", exist_ok=True)
+                with open("debug/debug_postprocess.txt", "w") as f:
                     f.write(f"=== POSTPROCESS DEBUG ===\n")
                     f.write(f"Original generation:\n{repr(generation)}\n\n")
                     f.write(f"completion_only: {completion_only}\n")
@@ -295,7 +298,7 @@ class OWAFOLTask(Task):
                 assert generation.startswith(
                     prefix
                 ), "Increase `--max_length_generation` to avoid truncation"
-                gen = generation[len(prefix) :].strip()
+                gen = generation[len(prefix):].strip()
                 # More robust stop word processing - take everything before the first stop word
                 for stop_word in self.stop_words:
                     if stop_word in gen:
@@ -304,7 +307,8 @@ class OWAFOLTask(Task):
             
             # Debug: Save intermediate processing
             if idx == 0:
-                with open("debug_postprocess.txt", "a") as f:
+                os.makedirs("debug", exist_ok=True)
+                with open("debug/debug_postprocess.txt", "a") as f:
                     f.write(f"After prefix removal and stop word processing:\n{repr(gen)}\n\n")
 
             if self._mode == "baseline":
@@ -320,7 +324,20 @@ class OWAFOLTask(Task):
                     if flag in line
                 ]
                 premises, conclusion = parses[:-1], parses[-1]
-                resp = evaluate(premises, conclusion)
+                
+                # Debug: Save neurosymbolic parsing details
+                if idx == 0:
+                    os.makedirs("debug", exist_ok=True)
+                    with open("debug/debug_neurosymbolic.txt", "w") as f:
+                        f.write(f"=== NEUROSYMBOLIC DEBUG ===\n")
+                        f.write(f"Parsed FOL lines: {parses}\n")
+                        f.write(f"Premises: {premises}\n")
+                        f.write(f"Conclusion: {conclusion}\n")
+                
+                print(f"DEBUG[base.py]: neurosymbolic parses: premises={premises}, conclusion={conclusion}")
+                # Convert list to tuple for caching
+                resp = evaluate(tuple(premises), conclusion)
+                print(f"DEBUG[base.py]: result: {resp}")
             elif self._mode == "cot":
                 flag = "ANSWER:"
                 resp = gen.split(flag)[-1].strip()
@@ -329,7 +346,8 @@ class OWAFOLTask(Task):
             
             # Debug: Save final response
             if idx == 0:
-                with open("debug_postprocess.txt", "a") as f:
+                os.makedirs("debug", exist_ok=True)
+                with open("debug/debug_postprocess.txt", "a") as f:
                     f.write(f"Final response before assertion: {repr(resp)}\n")
                     f.write(f"Is valid? {resp in ['True', 'False', 'Uncertain']}\n\n")
 
@@ -338,10 +356,10 @@ class OWAFOLTask(Task):
         except Exception as e:
             # Debug: Save error details
             if idx == 0:
-                with open("debug_postprocess.txt", "a") as f:
+                os.makedirs("debug", exist_ok=True)
+                with open("debug/debug_postprocess.txt", "a") as f:
                     f.write(f"ERROR: {e}\n")
                     f.write(f"Returning ERROR_TOKEN: {self.ERROR_TOKEN}\n")
-            # TODO: explore failure cases and improve postprocessing
             print(f"Error in parsing and/or evaluating LLM output: {e}")
             return self.ERROR_TOKEN
 
@@ -381,7 +399,8 @@ class OWAFOLTask(Task):
                 examples.append(self.format_train_example(doc))
             # Debug: Save the first few-shot example to a file
             if examples:
-                with open("debug_examples.txt", "w") as f:
+                os.makedirs("debug", exist_ok=True)
+                with open("debug/debug_examples.txt", "w") as f:
                     f.write(examples[0])
             return "\n".join(examples)
         except Exception as e:

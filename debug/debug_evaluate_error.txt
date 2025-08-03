@@ -1,0 +1,12 @@
+Error: End of input found.  Expected token ')'.
+((Evocative(Work(Max)) & Dreamy(Work(Max)))
+                                           ^
+
+Premises:
+  all x. (DesignStyle(x, ZahaHadid) -> Timeless(x))
+  all x. (Timeless(x) -> -MassProductDesign(x))
+  (DesignStyle(Work(Max), ZahaHadid) | DesignStyle(Work(Max), KellyWearstler))
+  all x. (DesignStyle(x, KellyWearstler) -> Evocative(x))
+  all x. (DesignStyle(x, KellyWearstler) -> Dreamy(x))
+  ((Timeless(Work(Max)) -> (MassProductDesign(Work(Max)) & Evocative(Work(Max))))
+Conclusion: ((Evocative(Work(Max)) & Dreamy(Work(Max)))

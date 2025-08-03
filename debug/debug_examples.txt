@@ -1,0 +1,27 @@
+<PREMISES>
+All dispensable things are environment-friendly.
+All woodware is dispensable.
+All paper is woodware.
+No good things are bad.
+All environment-friendly things are good.
+A worksheet is either paper or is environment-friendly.
+</PREMISES>
+<CONCLUSION>
+A worksheet is not dispensable.
+</CONCLUSION>
+<EVALUATE>
+TEXT:	All dispensable things are environment-friendly.
+FOL:	all x. (Dispensable(x) -> EnvironmentFriendly(x))
+TEXT:	All woodware is dispensable.
+FOL:	all x. (Woodware(x) -> Dispensable(x))
+TEXT:	All paper is woodware.
+FOL:	all x. (Paper(x) -> Woodware(x))
+TEXT:	No good things are bad.
+FOL:	all x. (Good(x) -> -Bad(x))
+TEXT:	All environment-friendly things are good.
+FOL:	all x. (EnvironmentFriendly(x) -> Good(x))
+TEXT:	A worksheet is either paper or is environment-friendly.
+FOL:	((Paper(Worksheet) & -EnvironmentFriendly(Worksheet)) | (-Paper(Worksheet) & EnvironmentFriendly(Worksheet)))
+TEXT:	A worksheet is not dispensable.
+FOL:	-Dispensable(Worksheet)
+</EVALUATE>

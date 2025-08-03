@@ -1,0 +1,7 @@
+Detected predicates:
+  DesignStyle
+  Dreamy
+  Evocative
+  MassProductDesign
+  Timeless
+  Work

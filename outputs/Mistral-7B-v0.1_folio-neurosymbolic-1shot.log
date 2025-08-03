@@ -1,0 +1,58 @@
+Selected Tasks: ['folio-neurosymbolic-1shot']
+Loading the model and tokenizer from HF (in bf16)
+Evaluating task: folio-neurosymbolic-1shot
+Kept 190/204 samples, 0 had errors.
+Generating text for task: folio-neurosymbolic-1shot
+Kept 190/204 samples, 0 had errors.
+number of problems for this task is 3
+Using n_copies=3 (each task will be run 3 time(s) to generate up to 3 outputs, trimming to 3).
+Setting stopping criteria: start_length=609
+Setting stopping criteria: start_length=609
+Setting stopping criteria: start_length=609
+Setting stopping criteria: start_length=634
+Setting stopping criteria: start_length=634
+Setting stopping criteria: start_length=634
+Setting stopping criteria: start_length=614
+Setting stopping criteria: start_length=614
+Setting stopping criteria: start_length=614
+Error in parsing and/or evaluating LLM output: Increase `--max_length_generation` to avoid truncation
+Error in parsing and/or evaluating LLM output: Increase `--max_length_generation` to avoid truncation
+Error in parsing and/or evaluating LLM output: Increase `--max_length_generation` to avoid truncation
+DEBUG[base.py]: neurosymbolic parses: premises=['all x. (DesignStyle(x,ZahaHadid) -> Timeless(x))', 'all x. (MassProductDesign(x) -> -Timeless(x))', '(DesignStyle(Worksheet,ZahaHadid) | DesignStyle(Worksheet,KellyWearstler))', 'all x. (DesignStyle(x,KellyWearstler) -> Evocative(x))', 'all x. (DesignStyle(x,KellyWearstler) -> Dreamy(x))', '(Timeless(Worksheet) -> (MassProductDesign(Worksheet) & Evocative(Worksheet)))'], conclusion=(Evocative(Worksheet) & Dreamy(Worksheet))
+DEBUG[utils.py]: evaluate called with premises=('all x. (DesignStyle(x,ZahaHadid) -> Timeless(x))', 'all x. (MassProductDesign(x) -> -Timeless(x))', '(DesignStyle(Worksheet,ZahaHadid) | DesignStyle(Worksheet,KellyWearstler))', 'all x. (DesignStyle(x,KellyWearstler) -> Evocative(x))', 'all x. (DesignStyle(x,KellyWearstler) -> Dreamy(x))', '(Timeless(Worksheet) -> (MassProductDesign(Worksheet) & Evocative(Worksheet)))'), conclusion=(Evocative(Worksheet) & Dreamy(Worksheet))
+[DEBUG] Premises: ['all x. (DesignStyle(x,ZahaHadid)__>_Timeless(x))', 'all x. (MassProductDesign(x)__>__Timeless(x))', '(DesignStyle(Worksheet,ZahaHadid)_|_DesignStyle(Worksheet,KellyWearstler))', 'all x. (DesignStyle(x,KellyWearstler)__>_Evocative(x))', 'all x. (DesignStyle(x,KellyWearstler)__>_Dreamy(x))', '(Timeless(Worksheet) -> (MassProductDesign(Worksheet)_&_Evocative(Worksheet)))']
+[DEBUG] Conclusion: (Evocative(Worksheet)_&_Dreamy(Worksheet))
+[DEBUG] Exception in evaluate: Unexpected token: '_'.  Expected token ')'.
+(Evocative(Worksheet)_&_Dreamy(Worksheet))
+                     ^
+DEBUG[base.py]: result: Uncertain
+DEBUG[base.py]: neurosymbolic parses: premises=['all x. (DesignStyle(x,ZahaHadid) -> Timeless(x))', 'all x. (-MassProductDesign(x) -> -Timeless(x))', '(DesignStyle(Work,ZahaHadid) | DesignStyle(Work,KellyWearstler))', 'all x. (DesignStyle(x,KellyWearstler) -> Evocative(x))', 'all x. (DesignStyle(x,KellyWearstler) -> Dreamy(x))', '(Timeless(Max) -> (MassProductDesign(Max) & Evocative(Max)))'], conclusion=Evocative(Max) & Dreamy(Max)
+DEBUG[utils.py]: evaluate called with premises=('all x. (DesignStyle(x,ZahaHadid) -> Timeless(x))', 'all x. (-MassProductDesign(x) -> -Timeless(x))', '(DesignStyle(Work,ZahaHadid) | DesignStyle(Work,KellyWearstler))', 'all x. (DesignStyle(x,KellyWearstler) -> Evocative(x))', 'all x. (DesignStyle(x,KellyWearstler) -> Dreamy(x))', '(Timeless(Max) -> (MassProductDesign(Max) & Evocative(Max)))'), conclusion=Evocative(Max) & Dreamy(Max)
+[DEBUG] Premises: ['all x. (DesignStyle(x,ZahaHadid)__>_Timeless(x))', 'all x. (_MassProductDesign(x)__>__Timeless(x))', '(DesignStyle(Work,ZahaHadid)_|_DesignStyle(Work,KellyWearstler))', 'all x. (DesignStyle(x,KellyWearstler)__>_Evocative(x))', 'all x. (DesignStyle(x,KellyWearstler)__>_Dreamy(x))', '(Timeless(Max) -> (MassProductDesign(Max)_&_Evocative(Max)))']
+[DEBUG] Conclusion: Evocative(Max) & Dreamy(Max)
+[DEBUG] Exception in evaluate: Unexpected token: '__>_Timeless'.  Expected token ')'.
+all x. (DesignStyle(x,ZahaHadid)__>_Timeless(x))
+                                ^
+DEBUG[base.py]: result: Uncertain
+DEBUG[base.py]: neurosymbolic parses: premises=['all x. (DesignStyle(x, ZahaHadid) -> Timeless(x))', 'all x. (Timeless(x) -> -MassProductDesign(x))', '(DesignStyle(Work(Max), ZahaHadid) | DesignStyle(Work(Max), KellyWearstler))', 'all x. (DesignStyle(x, KellyWearstler) -> Evocative(x))', 'all x. (DesignStyle(x, KellyWearstler) -> Dreamy(x))', '((Timeless(Work(Max)) -> (MassProductDesign(Work(Max)) & Evocative(Work(Max))))'], conclusion=((Evocative(Work(Max)) & Dreamy(Work(Max)))
+DEBUG[utils.py]: evaluate called with premises=('all x. (DesignStyle(x, ZahaHadid) -> Timeless(x))', 'all x. (Timeless(x) -> -MassProductDesign(x))', '(DesignStyle(Work(Max), ZahaHadid) | DesignStyle(Work(Max), KellyWearstler))', 'all x. (DesignStyle(x, KellyWearstler) -> Evocative(x))', 'all x. (DesignStyle(x, KellyWearstler) -> Dreamy(x))', '((Timeless(Work(Max)) -> (MassProductDesign(Work(Max)) & Evocative(Work(Max))))'), conclusion=((Evocative(Work(Max)) & Dreamy(Work(Max)))
+[DEBUG] Premises: ['all x. (DesignStyle(x,_ZahaHadid)__>_Timeless(x))', 'all x. (Timeless(x)__>__MassProductDesign(x))', '(DesignStyle(Work(Max), ZahaHadid) | DesignStyle(Work(Max), KellyWearstler))', 'all x. (DesignStyle(x,_KellyWearstler)__>_Evocative(x))', 'all x. (DesignStyle(x,_KellyWearstler)__>_Dreamy(x))', '((Timeless(Work(Max)) -> (MassProductDesign(Work(Max)) & Evocative(Work(Max))))']
+[DEBUG] Conclusion: ((Evocative(Work(Max)) & Dreamy(Work(Max)))
+[DEBUG] Exception in evaluate: End of input found.  Expected token ')'.
+((Evocative(Work(Max)) & Dreamy(Work(Max)))
+                                           ^
+DEBUG[base.py]: result: Uncertain
+Error in parsing and/or evaluating LLM output: Increase `--max_length_generation` to avoid truncation
+Error in parsing and/or evaluating LLM output: Increase `--max_length_generation` to avoid truncation
+Error in parsing and/or evaluating LLM output: Increase `--max_length_generation` to avoid truncation
+raw generations were saved
+processed generations were saved
+references were saved
+{
+  "config": {
+    "model": "mistralai/Mistral-7B-v0.1"
+  },
+  "folio-neurosymbolic-1shot": {
+    "accuracy (pass@1 majority)": 0.0
+  }
+}

@@ -153,5 +153,5 @@ class GenerationArguments:
         default="<|endoftext|>", metadata={"help": "end of sentence token."}
     )
     seed: Optional[int] = field(
-        default=0, metadata={"help": "Random seed used for evaluation."}
+        default=42, metadata={"help": "Random seed used for evaluation."}
     )

@@ -1,0 +1,48 @@
+</s></s></s></s></s></s></s></s></s></s></s></s></s></s></s></s></s></s></s></s><s> The following is a first-order logic (FOL) problem.
+The problem is to determine whether the conclusion follows from the premises.
+The premises are given in the form of a set of first-order logic sentences.
+The conclusion is given in the form of a single first-order logic sentence.
+The task is to translate each of the premises and conclusions into FOL expressions, so that the expressions can be evaluated by a theorem solver to determine whether the conclusion follows from the premises.
+Expressions should be adhere to the format of the Python NLTK package logic module.
+
+
+<PREMISES>
+All dispensable things are environment-friendly.
+All woodware is dispensable.
+All paper is woodware.
+No good things are bad.
+All environment-friendly things are good.
+A worksheet is either paper or is environment-friendly.
+</PREMISES>
+<CONCLUSION>
+A worksheet is not dispensable.
+</CONCLUSION>
+<EVALUATE>
+TEXT:	All dispensable things are environment-friendly.
+FOL:	all x. (Dispensable(x) -> EnvironmentFriendly(x))
+TEXT:	All woodware is dispensable.
+FOL:	all x. (Woodware(x) -> Dispensable(x))
+TEXT:	All paper is woodware.
+FOL:	all x. (Paper(x) -> Woodware(x))
+TEXT:	No good things are bad.
+FOL:	all x. (Good(x) -> -Bad(x))
+TEXT:	All environment-friendly things are good.
+FOL:	all x. (EnvironmentFriendly(x) -> Good(x))
+TEXT:	A worksheet is either paper or is environment-friendly.
+FOL:	((Paper(Worksheet) & -EnvironmentFriendly(Worksheet)) | (-Paper(Worksheet) & EnvironmentFriendly(Worksheet)))
+TEXT:	A worksheet is not dispensable.
+FOL:	-Dispensable(Worksheet)
+</EVALUATE>
+
+<PREMISES>
+If an animal barks, then Jane does not like it.
+All dogs are animals that bark.
+If an animal jumps, then Jane likes it.
+If an animal has legs, then it jumps.
+If an animal is terricolous, then it has legs.
+If KiKi neither jumps nor has legs, then KiKi is terricolous or has legs.
+</PREMISES>
+<CONCLUSION>
+KiKi neither barks nor is a dog.
+</CONCLUSION>
+<EVALUATE>
